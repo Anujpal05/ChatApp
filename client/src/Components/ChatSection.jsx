@@ -1,10 +1,36 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { CgProfile } from "react-icons/cg";
 import { BsFillSendFill } from "react-icons/bs";
 import '../App.css'
-
+import io from 'socket.io-client';
+const socket = io('http://localhost:5000');
 
 const ChatSection = () => {
+    const [socketId, setsocketId] = useState(null)
+    const messageRef = useRef(null);
+
+    const sendMessage = () => {
+        const message = messageRef.current.value;
+        if (message) {
+            socket.emit('message', messageRef.current.value);
+            messageRef.current.value = ''
+        }
+    }
+
+    socket.on('broadcast', ({ socketId, message }) => {
+        const msgContainer = document.getElementsByClassName('msg-container')[0];
+        if (msgContainer) {
+            console.log(socketId, " : ", message);
+            <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>Hii</p>
+            const pElement = document.createElement('p');
+            pElement.className = ' self-end bg-green-700 max-w-[30%] p-2 rounded-lg';
+            pElement.innerText = message;
+            msgContainer.appendChild(pElement);
+        }
+    })
+
+
+
     return (
         <div className=' relative w-full  '>
             <div className='w-full'>
@@ -13,7 +39,7 @@ const ChatSection = () => {
                     <div>Anuj pal</div>
                 </div>
                 <div className=' max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-700  '>
-                    <div className=' flex flex-col justify-between gap-2 w-full p-5'>
+                    <div className=' flex flex-col justify-between gap-2 w-full p-5 msg-container' >
                         <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>Hii</p>
                         <p className=' self-start  bg-gray-700 max-w-[30%] p-2 rounded-lg'>Hii</p>
                         <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>Kya kar raha hai</p>
@@ -41,8 +67,8 @@ const ChatSection = () => {
                     </div>
                 </div>
                 <div className=' absolute bottom-8 px-2 w-full flex justify-center items-center gap-3'>
-                    <input type="text" name="message" id="message" autoComplete='off' className=' w-[90%] p-2 outline-none appearance-none bg-gray-800 px-2 rounded-md text-[15px]' placeholder='Type a message' />
-                    <button className=' text-2xl text-blue-600 p-2 outline-none bg-gray-200 rounded-full hover:scale-105 transition-all duration-300 ease-in-out'><BsFillSendFill /></button>
+                    <input ref={messageRef} type="text" name="message" id="message" autoComplete='off' className=' w-[90%] p-2 outline-none appearance-none bg-gray-800 px-2 rounded-md text-[15px]' placeholder='Type a message' />
+                    <button className=' text-2xl text-blue-600 p-2 outline-none bg-gray-200 rounded-full hover:scale-105 transition-all duration-300 ease-in-out' onClick={sendMessage}><BsFillSendFill /></button>
                 </div>
             </div>
         </div>

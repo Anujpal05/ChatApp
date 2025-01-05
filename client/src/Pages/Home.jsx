@@ -1,8 +1,28 @@
-import React from 'react'
+import React, { useRef } from 'react'
+import axios from 'axios'
 import image from '../assets/image/chatImg.png'
 import { FaArrowRight } from "react-icons/fa6";
 
 const Home = () => {
+
+    const userNameRef = useRef(null);
+    const passwordRef = useRef(null)
+
+    const register = async () => {
+        try {
+            const userName = userNameRef.current.value;
+            const password = passwordRef.current.value;
+
+            const res = await axios.post('http://localhost:5000/api/user/register', {
+                userName,
+                password
+            })
+            console.log(res)
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
     return (
         <div className=' bg-black min-h-screen w-screen text-white overflow-x-hidden'>
             <p className=' text-center font-semibold text-4xl py-3 underline'>Start Chats</p>
@@ -16,14 +36,14 @@ const Home = () => {
                             <h1 className=' text-2xl font-semibold'><span className=' text-purple-800'>Let's Start</span> Chatting!</h1>
                             <div className=' flex flex-col gap-1'>
                                 <label htmlFor="">Enter UserName</label>
-                                <input type="text" name="" id="" className=' bg-zinc-800 border-zinc-700 border-2 p-1 rounded-md outline-none px-3' placeholder='Enter Username' />
+                                <input ref={userNameRef} type="text" name="" id="" className=' bg-zinc-800 border-zinc-700 border-2 p-1 rounded-md outline-none px-3' placeholder='Enter Username' />
                             </div>
                             <div className=' flex flex-col gap-1'>
                                 <label htmlFor="">Enter Password</label>
-                                <input type="text" name="" id="" className=' bg-zinc-800 border-zinc-700 border-2 p-1 rounded-md outline-none px-3' placeholder='Enter Password' />
+                                <input ref={passwordRef} type="text" name="" id="" className=' bg-zinc-800 border-zinc-700 border-2 p-1 rounded-md outline-none px-3' placeholder='Enter Password' />
                             </div>
                             <div className=' flex justify-center'>
-                                <button className=' text-gray-800 outline-none bg-teal-500 p-2 rounded-full text-lg lg:text-xl font-bold w-fit px-5 lg:px-10 flex items-center'><span className=' text-purple-900 px-1'>Let's  </span>Start <span className=' px-1'><FaArrowRight /></span></button>
+                                <button className=' text-gray-800 outline-none bg-teal-500 p-2 rounded-full text-lg lg:text-xl font-bold w-fit px-5 lg:px-10 flex items-center' onClick={register}><span className=' text-purple-900 px-1'>Let's  </span>Start <span className=' px-1'><FaArrowRight /></span></button>
                             </div>
                         </div>
                     </div>

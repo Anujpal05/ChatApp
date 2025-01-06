@@ -1,23 +1,28 @@
 import React, { useRef } from 'react'
 import axios from 'axios'
+import { useNavigate } from 'react-router-dom';
 import image from '../assets/image/chatImg.png'
 import { FaArrowRight } from "react-icons/fa6";
 
 const Home = () => {
 
     const userNameRef = useRef(null);
-    const passwordRef = useRef(null)
+    const passwordRef = useRef(null);
+    const navigate = useNavigate();
 
     const register = async () => {
         try {
             const userName = userNameRef.current.value;
             const password = passwordRef.current.value;
 
-            const res = await axios.post('http://localhost:5000/api/user/register', {
+            const { data } = await axios.post('http://localhost:5000/api/user/register', {
                 userName,
                 password
             })
-            console.log(res)
+
+            localStorage.setItem('userId', data.userId);
+
+            navigate('/chat')
         } catch (error) {
             console.log(error)
         }

@@ -1,33 +1,143 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useId, useRef, useState } from 'react'
 import { CgProfile } from "react-icons/cg";
 import { BsFillSendFill } from "react-icons/bs";
 import '../App.css'
-import io from 'socket.io-client';
-const socket = io('http://localhost:5000');
+import { io } from 'socket.io-client';
+import axios from 'axios';
+import { userContext } from '../Pages/Chat';
 
 const ChatSection = () => {
-    const [socketId, setsocketId] = useState(null)
+    const [socket, setsocket] = useState(null)
     const messageRef = useRef(null);
+    const userId = localStorage.getItem('userId');
+    const { selectedUsers, setselectedUsers } = useContext(userContext);
 
-    const sendMessage = () => {
+
+    useEffect(() => {
+        if (userId) {
+            const newSocket = io('http://localhost:5000', {
+                query: { userId }
+            });
+            setsocket(newSocket)
+            newSocket.on('connect', () => {
+                console.log(newSocket._opts.query.userId)
+                console.log(newSocket.id)
+            })
+
+
+            newSocket.on('broadcast', ({ socketId, message }) => {
+                const msgContainer = document.getElementsByClassName('msg-container')[0];
+                if (msgContainer) {
+                    const pElement = document.createElement('p');
+                    if (userId != selectedUsers) {
+                        pElement.className = ' self-end bg-green-700 max-w-[30%] p-2 rounded-lg';
+                    } else {
+                        pElement.className = 'self-start  bg-gray-700 max-w-[30%] p-2 rounded-lg'
+                    }
+                    pElement.innerText = message;
+                    msgContainer.appendChild(pElement);
+                }
+            })
+        }
+    }, [userId])
+
+    useEffect(() => {
+        const updateUser = async () => {
+            try {
+                const res = await axios.post('http://localhost:5000/api/user/update-user', { userId, socketId: socket.id })
+                console.log(res)
+            } catch (error) {
+                console.log(error)
+            }
+        }
+
+        if (socket) {
+            updateUser();
+        }
+    }, [socket])
+
+
+
+
+
+
+    useEffect(() => {
+        const fetchMsg = async () => {
+            try {
+
+                console.log(userId);
+
+                const { data: { allMessage } } = await axios.get("http://localhost:5000/api/message/get-message", {
+                    params: {
+                        senderId: userId,
+                        receiverId: selectedUsers
+                    }
+                })
+
+                console.log(allMessage)
+
+                const msgContainer = document.getElementsByClassName('msg-container')[0];
+                if (msgContainer && allMessage) {
+                    allMessage.forEach(element => {
+                        const pElement = document.createElement('p');
+                        if (userId == element.senderId) {
+                            pElement.className = ' self-end bg-green-700 max-w-[30%] p-2 rounded-lg';
+                        } else {
+                            pElement.className = 'self-start  bg-gray-700 max-w-[30%] p-2 rounded-lg'
+                        }
+                        pElement.innerText = element.text;
+                        msgContainer.appendChild(pElement);
+                    });
+                }
+            } catch (error) {
+                console.log(error)
+            }
+        }
+
+        fetchMsg();
+    }, [])
+
+
+
+
+
+    useEffect(() => {
+        const getUser = async () => {
+            try {
+                console.log("..")
+                const res = await axios.get("http://localhost:5000/api/user/get-user", {
+                    params: {
+                        userId: selectedUsers
+                    }
+                })
+                console.log(res)
+            } catch (error) {
+                console.log(error)
+            }
+        }
+
+        if (selectedUsers) {
+            getUser();
+        }
+    }, [selectedUsers])
+
+
+
+    const sendMessage = async () => {
         const message = messageRef.current.value;
-        if (message) {
-            socket.emit('message', messageRef.current.value);
+        if (message && socket) {
+            socket.emit('message', { message: messageRef.current.value, receiverId: selectedUsers });
             messageRef.current.value = ''
+            try {
+                const res = await axios.post("http://localhost:5000/api/message/send-message", { senderId: userId, receiverId: selectedUsers, text: message })
+
+                console.log(res)
+
+            } catch (error) {
+                console.log(error)
+            }
         }
     }
-
-    socket.on('broadcast', ({ socketId, message }) => {
-        const msgContainer = document.getElementsByClassName('msg-container')[0];
-        if (msgContainer) {
-            console.log(socketId, " : ", message);
-            <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>Hii</p>
-            const pElement = document.createElement('p');
-            pElement.className = ' self-end bg-green-700 max-w-[30%] p-2 rounded-lg';
-            pElement.innerText = message;
-            msgContainer.appendChild(pElement);
-        }
-    })
 
 
 
@@ -40,7 +150,7 @@ const ChatSection = () => {
                 </div>
                 <div className=' max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-700  '>
                     <div className=' flex flex-col justify-between gap-2 w-full p-5 msg-container' >
-                        <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>Hii</p>
+                        {/* <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>Hii</p>
                         <p className=' self-start  bg-gray-700 max-w-[30%] p-2 rounded-lg'>Hii</p>
                         <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>Kya kar raha hai</p>
                         <p className=' self-start  bg-gray-700 max-w-[30%] p-2 rounded-lg'>Kuchh nhi</p>
@@ -63,7 +173,7 @@ const ChatSection = () => {
                         <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>Good night</p>
                         <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>Byee</p>
                         <p className=' self-start  bg-gray-700 max-w-[30%] p-2 rounded-lg'>Good night</p>
-                        <p className=' self-start  bg-gray-700 max-w-[30%] p-2 rounded-lg'>Byee</p>
+                        <p className=' self-start  bg-gray-700 max-w-[30%] p-2 rounded-lg'>Byee</p> */}
                     </div>
                 </div>
                 <div className=' absolute bottom-8 px-2 w-full flex justify-center items-center gap-3'>

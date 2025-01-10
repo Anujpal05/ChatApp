@@ -1,8 +1,9 @@
 import Messages from "../models/message.model.js";
 
-export const getMessage = async (req, res) => {
+export const getMessages = async (req, res) => {
   try {
-    const { senderId, receiverId } = req.query;
+    const { id: receiverId } = req.params;
+    const senderId = req.user.userId;
 
     if (!senderId || !receiverId) {
       return res
@@ -10,13 +11,14 @@ export const getMessage = async (req, res) => {
         .json({ message: "Please provide all required field!" });
     }
 
-    const allMessage = await Messages.find({
-      $or: [{ senderId }, { receiverId }],
+    const allMessages = await Messages.find({
+      $or: [
+        { senderId, receiverId },
+        { senderId: receiverId, receiverId: senderId },
+      ],
     });
 
-    return res
-      .status(200)
-      .json({ message: "Retrieve all messages!", allMessage });
+    return res.status(200).json({ allMessages });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -24,7 +26,13 @@ export const getMessage = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { senderId, receiverId, text } = req.body;
+    const { text } = req.body;
+    const { id: receiverId } = req.params;
+    const senderId = req.user.userId;
+
+    console.log(receiverId);
+    console.log(senderId);
+    console.log(text);
 
     if (!senderId || !receiverId || !text) {
       return res

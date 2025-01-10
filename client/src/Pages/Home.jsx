@@ -3,29 +3,21 @@ import axios from 'axios'
 import { useNavigate } from 'react-router-dom';
 import image from '../assets/image/chatImg.png'
 import { FaArrowRight } from "react-icons/fa6";
+import useAuthStore from '../store/authStore';
+import { axiosInstance } from '../../utils/axios';
 
 const Home = () => {
 
     const userNameRef = useRef(null);
     const passwordRef = useRef(null);
+    const { login } = useAuthStore();
     const navigate = useNavigate();
 
     const register = async () => {
-        try {
-            const userName = userNameRef.current.value;
-            const password = passwordRef.current.value;
+        const userName = userNameRef.current.value;
+        const password = passwordRef.current.value;
 
-            const { data } = await axios.post('http://localhost:5000/api/user/register', {
-                userName,
-                password
-            })
-
-            localStorage.setItem('userId', data.userId);
-
-            navigate('/chat')
-        } catch (error) {
-            console.log(error)
-        }
+        login({ userName, password })
     }
 
     return (

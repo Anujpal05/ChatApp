@@ -1,5 +1,6 @@
+import { generateToken } from "../auth/auth.js";
 import Users from "../models/user.model.js";
-import { io } from "../index.js";
+import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 
 export const registerUser = async (req, res) => {
@@ -26,21 +27,49 @@ export const registerUser = async (req, res) => {
 
     const existingUser = await Users.findOne({ userName });
 
-    res.cookie("userName", userName);
     if (existingUser) {
+      const isMatch = await bcrypt.compare(password, existingUser.password);
+
+      if (!isMatch) {
+        return res.status(401).json({ message: "Invalid credentials!" });
+      }
+
+      const payload = {
+        userName,
+        userId: existingUser._id,
+      };
+
+      const token = generateToken(payload);
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "Lax",
+      });
+
       return res
         .status(200)
         .json({ message: "Login Successfully!", userId: existingUser._id });
     }
 
-    const userId = Date.now();
-
+    const hashPassword = await bcrypt.hash(password, 10);
     const newUser = new Users({
       userName,
-      password,
+      password: hashPassword,
     });
 
     await newUser.save();
+
+    const payload = {
+      userName,
+      userId: newUser._id,
+    };
+
+    const token = generateToken(payload);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "Lax",
+    });
 
     return res.status(200).json({
       message: "New user register successfully!",
@@ -54,15 +83,29 @@ export const registerUser = async (req, res) => {
   }
 };
 
+export const logOut = (req, res) => {
+  try {
+    res.cookie("token", "", { maxAge: 0 });
+    return res.status(200).json({ message: "LogOut successfully!" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const updateUser = async (req, res) => {
   try {
     const { userId, socketId } = req.body;
     const user_id = new mongoose.Types.ObjectId(userId);
+    const use = await Users.findById(userId);
+    console.log(socketId);
+    console.log("Before User : ", use);
     const user = await Users.findByIdAndUpdate(
       user_id,
       { $set: { socketId: socketId } },
       { new: true }
     );
+
+    console.log("After :", user);
 
     return res.status(200).json({ message: "Updating...", user });
   } catch (error) {
@@ -70,9 +113,11 @@ export const updateUser = async (req, res) => {
   }
 };
 
-export const getAllUser = async (req, res) => {
+export const getAllUsers = async (req, res) => {
   try {
-    const users = await Users.find().sort({ createdAt: -1 });
+    const users = await Users.find()
+      .select("-password")
+      .sort({ createdAt: -1 });
     return res
       .status(200)
       .json({ message: "Retrieve all users successfully!", users });
@@ -84,8 +129,7 @@ export const getAllUser = async (req, res) => {
 export const getUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log(userId);
-    const user = await Users.findById(userId);
+    const user = await Users.findById(userId).select("-password");
     return res.status(200).json({ message: "Retrieve user details!", user });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error!" });

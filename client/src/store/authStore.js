@@ -8,7 +8,7 @@ const useAuthStore = create(
   persist(
     (set, get) => ({
       isLogin: false,
-      authUser: 789,
+      authUser: null,
       onlineUsers: [],
       socket: null,
       login: async (userData) => {
@@ -45,6 +45,7 @@ const useAuthStore = create(
 
         set({ socket: socket });
 
+        socket.off("getOnlineUsers");
         socket.on("getOnlineUsers", (userIds) => {
           set({ onlineUsers: userIds });
         });
@@ -52,8 +53,11 @@ const useAuthStore = create(
       disconnectSocket: () => {
         const { socket } = get();
         if (socket && socket.connected) {
+          socket.off();
           socket.disconnect();
         }
+
+        set({ socket: null });
       },
     }),
     {

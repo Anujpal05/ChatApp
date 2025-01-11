@@ -1,8 +1,7 @@
-import React, { createContext, useState } from 'react'
+import React from 'react'
 import Sidebar from '../Components/Sidebar'
 import ChatSection from '../Components/ChatSection'
 
-export const userContext = createContext();
 const Chat = () => {
 
     return (

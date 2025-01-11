@@ -1,49 +1,44 @@
-import React, { useContext, useEffect, useId, useRef, useState } from 'react'
-import { CgProfile } from "react-icons/cg";
+import React, { useEffect, useRef, useState } from 'react'
 import { BsFillSendFill } from "react-icons/bs";
 import '../App.css'
-import { io } from 'socket.io-client';
-import axios, { all } from 'axios';
-import { axiosInstance } from '../../utils/axios';
 import useAuthStore from '../store/authStore.js';
 import useChatStore from '../store/chatStore';
 import { RxCross2 } from "react-icons/rx";
+import profileImg from '../assets/image/profile.png'
+
 
 
 const ChatSection = () => {
     const messageRef = useRef(null);
-    const { selectedUser, setSelectedUser, sendMessage, messages, getMessages, clearMessages } = useChatStore();
-    const { socket, onlineUsers, authUser } = useAuthStore();
+    const { selectedUser, setSelectedUser, sendMessage, setMessages, getMessages, clearMessages, subscribeToMessages, unsubscribeFromMessage } = useChatStore();
+    const { socket, onlineUsers, connectSocket, disconnectSocket, authUser } = useAuthStore();
+    const messages = useChatStore((state) => state.messages)
 
-    // useEffect(() => {
-    //     if (userId) {
-    //         socket.on('broadcast', ({ socketId, message }) => {
-    //             const msgContainer = document.getElementsByClassName('msg-container')[0];
-    //             if (msgContainer) {
-    //                 const pElement = document.createElement('p');
-    //                 if (userId != selectedUser) {
-    //                     pElement.className = ' self-end bg-green-700 max-w-[30%] p-2 rounded-lg';
-    //                 } else {
-    //                     pElement.className = 'self-start  bg-gray-700 max-w-[30%] p-2 rounded-lg'
-    //                 }
-    //                 pElement.innerText = message;
-    //                 msgContainer.appendChild(pElement);
-    //             }
-    //         })
-    //     }
-    // }, [userId])
-
-
+    useEffect(() => {
+        connectSocket();
+        return () => disconnectSocket();
+    }, [])
 
 
     useEffect(() => {
         if (selectedUser) {
-            clearMessages();
             getMessages();
         }
-    }, [selectedUser])
 
+        if (!socket) return;
 
+        if (socket) {
+
+            socket.on("newMessage", (newMessage) => {
+                const isMessageSentFromSelectedUser =
+                    newMessage.senderId === selectedUser._id;
+                if (!isMessageSentFromSelectedUser) return;
+
+                setMessages(newMessage)
+            });
+        }
+
+    }, [selectedUser, setMessages, getMessages])
 
     const messageSend = async () => {
         const message = messageRef.current.value;
@@ -53,13 +48,11 @@ const ChatSection = () => {
         }
     }
 
-
-
     return (
         <div className=' relative w-full  '>
             {selectedUser && <div className='w-full'>
                 <div className=' flex items-center gap-4 p-2 bg-gray-900 w-full relative'>
-                    <div ><CgProfile className=' h-10 w-10 rounded-full bg-blue-700 text-gray-300' /></div>
+                    <div     ><img src={profileImg} className=' h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300' /></div>
                     <div>{selectedUser.userName}</div>
                     <span className=' absolute right-8 text-2xl text-red-700 hover:text-[27px] hover:text-red-900' onClick={() => setSelectedUser(null)}><RxCross2 /></span>
                 </div>
@@ -67,7 +60,8 @@ const ChatSection = () => {
                     {selectedUser && messages && <div className=' flex flex-col justify-between gap-2 w-full p-5 msg-container' >
                         {messages.length > 0 && messages.map((message, i) => (
                             <div className='flex flex-col justify-between w-full' key={i}>
-                                {selectedUser._id == message.senderId ? <p className='self-start bg-gray-700 max-w-[30%] p-2 rounded-lg'>{message.text}</p> : authUser == message.senderId && <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>{message.text}</p>}
+                                {selectedUser._id == message.senderId && <p className='self-start bg-gray-700 max-w-[30%] p-2 rounded-lg'>{message.text}</p>}
+                                {authUser == message.senderId && <p className=' self-end bg-green-700 max-w-[30%] p-2 rounded-lg'>{message.text}</p>}
                             </div>
                         ))}
                         {messages.length == 0 && <p className=' font-semibold text-center'>Start chatting with {selectedUser.userName}</p>}

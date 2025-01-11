@@ -1,17 +1,13 @@
 import React, { useRef } from 'react'
-import axios from 'axios'
-import { useNavigate } from 'react-router-dom';
 import image from '../assets/image/chatImg.png'
 import { FaArrowRight } from "react-icons/fa6";
 import useAuthStore from '../store/authStore';
-import { axiosInstance } from '../../utils/axios';
 
 const Home = () => {
 
     const userNameRef = useRef(null);
     const passwordRef = useRef(null);
     const { login } = useAuthStore();
-    const navigate = useNavigate();
 
     const register = async () => {
         const userName = userNameRef.current.value;

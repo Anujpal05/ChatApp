@@ -1,7 +1,6 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { FaRegEdit } from "react-icons/fa";
-import { IoFilterOutline } from "react-icons/io5";
-import "../index.css"
+import { BiLogOut } from "react-icons/bi";
 import { axiosInstance } from '../../utils/axios';
 import useAuthStore from '../store/authStore';
 import useChatStore from '../store/chatStore';
@@ -26,23 +25,20 @@ const Sidebar = () => {
         getAllUsers();
     }, [])
 
-    useEffect(() => {
-        console.log(selectedUser)
-    }, [selectedUser])
-
 
 
     return (
-        <div className=' lg:w-[30%] p-5 bg-gray-900 min-h-screen border-r-[1px] border-gray-600 pr-1'>
+        <div className=' w-full p-5 bg-gray-950 min-h-screen border-r-[1px] border-gray-600 pr-1'>
             <div className=' flex justify-between'>
                 <h1 className=' text-2xl font-semibold'>Chats</h1>
-                <div className=' flex gap-5 text-2xl'>
-                    <div onClick={logOut}><FaRegEdit /></div>
-                    <div><IoFilterOutline /></div>
+                <div className=' flex text-2xl relative'>
+                    <div ><FaRegEdit /></div>
+                    <div onClick={logOut} className=' cursor-pointer hover:scale-105 text-red-600 pl-5 pr-3  '><BiLogOut />
+                    </div>
                 </div>
             </div>
-            <div className='py-5'><input type="text" name="search" id="search" placeholder='Search' autoComplete='off' className=' p-1 w-full px-3 bg-gray-800 border-b-[1px] border-gray-400 rounded-md outline-none appearance-none' /></div>
-            <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-800 no-scrollbar-arrows flex-grow lg:max-h-[80vh]'>
+            <div className='py-5'><input type="text" name="search" id="search" placeholder='Search' autoComplete='off' className=' p-1 w-full px-3 bg-gray-900 border-b-[1px] border-gray-400 rounded-md outline-none appearance-none' /></div>
+            <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow max-h-[80vh] '>
                 <ul className=' space-y-1'>
                     {users && users.map((user, i) => (
                         <li className={` hover:bg-gray-800 p-2 rounded-md transition-all duration-300 ease-in-out ${selectedUser?._id === user._id ? 'bg-gray-800 ' : ""}`} onClick={() => setSelectedUser(user)} key={i}>

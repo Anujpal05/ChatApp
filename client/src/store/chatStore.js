@@ -23,7 +23,6 @@ const useChatStore = create(
           };
 
           get().setMessages(msg);
-          console.log(res.data.newMessage);
         } catch (error) {
           console.log(error);
         }
@@ -37,7 +36,6 @@ const useChatStore = create(
               `/message/get-messages/${get().selectedUser._id}`
             );
 
-            console.log(allMessages);
             set({ messages: allMessages });
           }
         } catch (error) {
@@ -46,7 +44,6 @@ const useChatStore = create(
       },
       setMessages: async (message) => {
         set((state) => ({ messages: [...state.messages, message] }));
-        console.log("message :", message.text);
       },
       clearMessages: async () => {
         set({ messages: [] });
@@ -56,10 +53,7 @@ const useChatStore = create(
         if (!selectedUser) return;
 
         const socket = useAuthStore.getState().socket;
-        console.log(socket);
         if (!socket) return;
-        console.log(socket);
-        console.log("new Msg");
 
         socket.on("newMessage", (newMessage) => {
           console.log("new Mwsg", newMessage);

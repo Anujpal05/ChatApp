@@ -21,7 +21,7 @@ const messageSchema = new mongoose.Schema(
     createdAt: {
       type: Date,
       default: Date.now(),
-      expires: 420,
+      expires: 86400,
     },
   },
   { timestamps: true }

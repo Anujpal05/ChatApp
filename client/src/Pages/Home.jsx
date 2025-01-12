@@ -1,5 +1,4 @@
 import React, { useRef } from 'react'
-import image from '../assets/image/chatImg.png'
 import { FaArrowRight } from "react-icons/fa6";
 import useAuthStore from '../store/authStore';
 
@@ -22,7 +21,7 @@ const Home = () => {
             <div>
                 <div className=' flex flex-col items-center lg:flex-row  lg:gap-5 pb-20'>
                     <div className=' h-[400px] lg:h-[90vh] flex items-center lg:px-10'>
-                        <img src={image} alt="" className=' h-[80%] opacity-90' />
+                        <img src="https://res.cloudinary.com/dcfy1v0ab/image/upload/v1736669568/slog3xcdmqzlkci7fyvy.png" alt="" className=' h-[80%] opacity-90' />
                     </div>
                     <div className=' flex justify-center lg:flex-grow'>
                         <div className=' flex flex-col justify-center gap-4 bg-zinc-900 p-8 lg:p-16 rounded-md'>

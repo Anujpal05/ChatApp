@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { axiosInstance } from "../../utils/axios";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
+import useChatStore from "./chatStore";
 
 const useAuthStore = create(
   persist(
@@ -28,6 +29,7 @@ const useAuthStore = create(
           const { data } = await axiosInstance.post("/user/logout");
           set({ isLogin: false });
           set({ authUser: null });
+          useChatStore.getState().setSelectedUser(null);
           get().disconnectSocket();
           toast.success(data.message);
         } catch (error) {

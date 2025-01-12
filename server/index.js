@@ -14,7 +14,7 @@ db();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_URL,
     credentials: true,
   })
 );
@@ -25,11 +25,9 @@ app.use("/api/user", userRouter);
 app.use("/api/message", messageRouter);
 
 app.get("/", (req, res) => {
-  res
-    .status(200)
-    .send(`<h1>Server is running on http://localhost:${PORT}</h1>`);
+  res.status(200).send(`<h1>Server is running on port ${PORT}</h1>`);
 });
 
 server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });

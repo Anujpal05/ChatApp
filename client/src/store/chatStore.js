@@ -9,17 +9,19 @@ const useChatStore = create(
       selectedUser: null,
       messages: [],
       setSelectedUser: (selectedUser) => set({ selectedUser: selectedUser }),
-      sendMessage: async (message) => {
+      sendMessage: async (messageData) => {
         try {
-          const { selectedUser, messages } = get();
+          const { selectedUser } = get();
           const res = await axiosInstance.post(
             `/message/send-message/${selectedUser._id}`,
-            { text: message }
+            messageData
           );
+
           const msg = {
             senderId: useAuthStore.getState().authUser,
             recieverid: selectedUser._id,
-            text: message,
+            text: messageData.text,
+            image: messageData.image,
           };
 
           get().setMessages(msg);

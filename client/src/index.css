@@ -6,6 +6,10 @@
   animation: chat-icon 0.5s infinite ease-in-out;
 }
 
+.show-image {
+  animation: show-image 1s ease-in-out;
+}
+
 @keyframes chat-icon {
   0% {
     transform: translate(2px, 0px);
@@ -15,5 +19,14 @@
   }
   100% {
     transform: translate(2px, 0px);
+  }
+}
+
+@keyframes show-image {
+  0% {
+    scale: 0%;
+  }
+  100% {
+    scale: 100%;
   }
 }

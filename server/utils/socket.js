@@ -26,6 +26,16 @@ io.on("connection", (socket) => {
     io.emit("broadcast", { socketId: socket.id, message: msg });
   });
 
+  socket.on("offer", (offer) => {
+    socket.broadcast.emit("offer", offer);
+  });
+  socket.on("answer", (answer) => {
+    socket.broadcast.emit("answer", answer);
+  });
+  socket.on("ice-candidate", (candidate) => {
+    socket.broadcast.emit("ice-candidate", candidate);
+  });
+
   const userId = socket?.handshake?.query?.userId;
 
   if (userId) {

@@ -45,17 +45,19 @@ const Sidebar = () => {
     }
 
     return (
-        <div className=' w-full p-5 bg-gray-950 min-h-screen border-r-[1px] border-gray-600 pr-1'>
-            <div className=' flex justify-between'>
-                <h1 className=' text-2xl font-semibold'>Chats</h1>
-                <div className=' flex text-2xl relative'>
-                    <div ><FaRegEdit /></div>
-                    <div onClick={logOut} className=' cursor-pointer hover:scale-105 text-red-600 pl-5 pr-3  '><BiLogOut />
+        <div className=' w-full flex flex-col bg-gray-950 border-r-[1px] border-gray-600 pr-1 max-h-screen'>
+            <div className=' max-h-[20vh] px-3 py-2'>
+                <div className=' flex justify-between'>
+                    <h1 className=' text-2xl font-semibold'>Chats</h1>
+                    <div className=' flex text-2xl relative'>
+                        <div ><FaRegEdit /></div>
+                        <div onClick={logOut} className=' cursor-pointer hover:scale-105 text-red-600 pl-5 pr-3  '><BiLogOut />
+                        </div>
                     </div>
                 </div>
+                <div className='py-2'><input ref={searchRef} onChange={handleInput} type="text" name="search" id="search" placeholder='Search' autoComplete='off' className=' p-1 w-full px-3 bg-gray-900 border-b-[1px] border-gray-400 rounded-md outline-none appearance-none' /></div>
             </div>
-            <div className='py-5'><input ref={searchRef} onChange={handleInput} type="text" name="search" id="search" placeholder='Search' autoComplete='off' className=' p-1 w-full px-3 bg-gray-900 border-b-[1px] border-gray-400 rounded-md outline-none appearance-none' /></div>
-            {users && !loader && <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow max-h-[80vh] '>
+            {users && !loader && <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow '>
                 <ul className=' space-y-1'>
                     {users.length > 0 && users.map((user, i) => (
                         <li className={` hover:bg-gray-800 p-2 rounded-md transition-all duration-300 ease-in-out ${selectedUser?._id === user._id ? 'bg-gray-800 ' : ""}`} onClick={() => setSelectedUser(user)} key={i}>

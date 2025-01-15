@@ -9,7 +9,7 @@ const Chat = () => {
     return (
         <div className=' bg-black min-h-screen w-screen text-white overflow-x-hidden'>
             <div className=' flex flex-col lg:flex-row '>
-                <div className={`${!selectedUser ? 'flex' : ' hidden lg:flex'} lg:w-[30%]`} >
+                <div className={`${!selectedUser ? 'flex' : ' hidden lg:flex'} lg:w-[30%] `} >
                     <Sidebar />
                 </div>
                 <div className={`${selectedUser ? 'flex' : 'hidden lg:flex'} flex-grow`}>

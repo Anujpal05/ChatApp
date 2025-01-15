@@ -24,7 +24,7 @@ const useChatStore = create(
             image: messageData.image,
           };
 
-          get().setMessages(msg);
+          get().getMessages(msg);
         } catch (error) {
           console.log(error);
         }

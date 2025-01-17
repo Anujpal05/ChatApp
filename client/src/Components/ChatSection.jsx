@@ -12,6 +12,7 @@ import { Comment } from 'react-loader-spinner'
 import toast from 'react-hot-toast';
 import getMessageTime from '../utils/getTime';
 import { IoMdCall } from "react-icons/io";
+import { FaVideo } from "react-icons/fa";
 import CallSection from './CallSection';
 
 
@@ -50,6 +51,11 @@ const ChatSection = () => {
 
                 setMessages(newMessage)
             });
+
+        }
+
+        return () => {
+            socket.off("newMessage")
         }
 
     }, [selectedUser, setMessages, getMessages])
@@ -119,14 +125,19 @@ const ChatSection = () => {
         <>
             <div className=' relative w-full max-h-screen overflow-hidden  '>
                 {selectedUser && <div className='w-full flex flex-col h-screen '>
-                    <div className=' flex items-center gap-4 p-2 bg-gray-950 w-full relative'>
-                        <div><img src={profileImg} className=' h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300' /></div>
-                        <div className=' flex flex-col'>
-                            <span>{selectedUser.userName}</span>
-                            {onlineUsers.includes(selectedUser._id) ? <span className=' text-green-400 text-[12px]'>Online</span> : <span className=' text-gray-300 text-[12px]'>Offline</span>}
+                    <div className=' flex justify-between items-center gap-4 p-2 bg-gray-950 w-full relative'>
+                        <div className=' flex gap-4'>
+                            <div><img src={profileImg} className=' h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300' /></div>
+                            <div className=' flex flex-col'>
+                                <span>{selectedUser.userName}</span>
+                                {onlineUsers.includes(selectedUser._id) ? <span className=' text-green-400 text-[12px]'>Online</span> : <span className=' text-gray-300 text-[12px]'>Offline</span>}
+                            </div>
                         </div>
-                        <button className=' absolute text-blue-600 outline-none right-20 text-2xl' onClick={showCallSection}> <IoMdCall /></button>
-                        <button className=' absolute right-8 text-2xl outline-none text-red-700 hover:text-[27px] hover:text-red-900' onClick={() => setSelectedUser(null)}><RxCross2 /></button>
+                        <div className=' space-x-5 px-3'>
+                            <button className=' text-blue-600 outline-none text-2xl' onClick={showCallSection}><a href={`#call:${selectedUser._id}`}> <FaVideo /></a></button>
+                            <button className=' text-blue-600 outline-none text-2xl' onClick={showCallSection}> <a href={`#call:${selectedUser._id}`}><IoMdCall /></a ></button>
+                            <button className=' text-2xl outline-none text-red-700 hover:text-[27px] hover:text-red-900' onClick={() => setSelectedUser(null)}><a href=''><RxCross2 /></a></button>
+                        </div>
                     </div>
                     <div className=' flex-grow overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 mb-10 ' style={{ backgroundImage: `url('https://res.cloudinary.com/dcfy1v0ab/image/upload/v1736671906/sigegsbfbfcveg3x4mph.jpg')` }}>
                         {selectedUser && messages && <div className=' flex flex-col gap-2 w-full p-5 msg-container h-full' >
@@ -182,16 +193,19 @@ const ChatSection = () => {
                     <div className=' text-yellow-400'>You can send <span className=' text-yellow-500'> and recieve message!</span></div>
                     <div className=' py-3 chat-icon'><BsFillChatRightDotsFill className=' text-yellow-500 text-4xl' /></div>
                 </div>}
-            </div>
+            </div >
             {showImg && <div className=' show-image absolute left-0 h-screen w-screen bg-black flex justify-center items-center'>
                 <button className=' absolute top-5 lg:right-10 right-5 text-2xl text-red-500 outline-none' onClick={() => setshowImg(null)}><RxCross2 /></button>
                 <button className=' absolute top-5 lg:right-20 right-16 text-2xl text-blue-500 outline-none' onClick={downloadImg}><MdOutlineFileDownload /></button>
                 <img src={showImg} alt="Image Preview" className=' lg:max-h-[80%]  lg:h-[700px] max-h-[70%] h-[400px] max-w-[90%] bg-blue-500' />
-            </div>}
+            </div>
+            }
 
-            {showCall && <div className=' '>
-                <CallSection showCall={showCall} setshowCall={setshowCall} />
-            </div>}
+            {
+                showCall && <div className=' '>
+                    <CallSection showCall={showCall} setshowCall={setshowCall} />
+                </div>
+            }
         </>
     )
 }

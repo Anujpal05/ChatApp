@@ -9,7 +9,8 @@ import { Toaster } from 'react-hot-toast';
 
 function App() {
   const { isLogin } = useAuthStore();
-  console.log(import.meta.env.VITE_SERVER_URL)
+  console.log("Client URL " + import.meta.env.VITE_SERVER_URL)
+
   return (
     <>
       <div>
@@ -17,7 +18,7 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path='/' element={!isLogin ? <Home /> : <Navigate to="/chat-section" />} />
-            <Route path='/chat-section' element={isLogin ? <Chat /> : <Navigate to="/" />} />
+            <Route path='/chat-section' element={isLogin && <Chat />} />
           </Routes>
         </BrowserRouter>
       </div>

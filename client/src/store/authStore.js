@@ -40,7 +40,7 @@ const useAuthStore = create(
       connectSocket: () => {
         if (!get().authUser || get().socket?.connected) return;
 
-        const socket = io("http://localhost:5000", {
+        const socket = io(`${import.meta.env.VITE_SERVER_URL}`, {
           query: { userId: get().authUser },
         });
         socket.connect();

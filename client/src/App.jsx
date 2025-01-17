@@ -9,6 +9,7 @@ import { Toaster } from 'react-hot-toast';
 
 function App() {
   const { isLogin } = useAuthStore();
+  console.log(import.meta.env.VITE_SERVER_URL)
   return (
     <>
       <div>

@@ -29,6 +29,8 @@ app.get("/", (req, res) => {
   res.status(200).send(`<h1>Server is running on port ${PORT}</h1>`);
 });
 
+console.log("Client Url " + process.env.CLIENT_URL);
+
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

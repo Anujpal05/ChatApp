@@ -59,7 +59,6 @@ const CallSection = ({ showCall, setshowCall }) => {
             socket.off("offer");
             socket.off("answer");
             socket.off("ice-candidate")
-
         }
     }, [showCall])
 

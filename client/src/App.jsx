@@ -10,7 +10,7 @@ import { useEffect } from 'react';
 
 function App() {
   const { isLogin, logOut } = useAuthStore();
-
+  console.log(isLogin)
 
   return (
     <>
@@ -18,9 +18,9 @@ function App() {
         <Toaster />
         <BrowserRouter>
           <Routes>
-            <Route path='/' element={!isLogin ? <Home /> : <Navigate to={'/chat-section'} />} />
-            <Route path='/chat-section' element={isLogin ? <Chat /> : <Navigate to={'/'} />} />
-            <Route path='*' element={<Navigate to={'/'} />} />
+            {!isLogin && <Route path='/' element={<Home />} />}
+            {isLogin && <Route path='/chat-section' element={<Chat />} />}
+            <Route path='*' element={!isLogin ? <Navigate to={'/'} /> : <Navigate to={'/chat-section'} />} />
           </Routes>
         </BrowserRouter>
       </div>

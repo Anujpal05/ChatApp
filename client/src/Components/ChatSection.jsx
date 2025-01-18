@@ -59,7 +59,6 @@ const ChatSection = () => {
 
         return () => {
             socket.off("newMessage")
-            socket.off("calling");
         }
 
     }, [selectedUser, setMessages, getMessages])
@@ -98,9 +97,9 @@ const ChatSection = () => {
                 btn1.className = "bg-green-500 rounded-md px-2 py-1 "
                 btn1.onclick = () => {
                     console.log(ringtone)
-                    setshowCall(true)
+                    showCallSection(data?.kind)
                     div1.remove();
-                    socket.emit('calling', { accept: true });
+                    socket.emit('calling', { accept: true, recieverId: selectedUser._id });
                 }
 
                 btn2.textContent = "Cancel";

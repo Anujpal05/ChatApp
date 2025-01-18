@@ -9,7 +9,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const [remoteStream, setremoteStream] = useState(null)
-    const { socket, authUser } = useAuthStore();
+    const { socket, authUser, selectedUser } = useAuthStore();
 
     const configuration = {
         iceServers: [
@@ -26,6 +26,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                     video: callingType == 'video' ? true : false,
                     audio: true
                 }
+
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 if (stream) {
                     localVideoRef.current.srcObject = stream;
@@ -37,20 +38,19 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                     peerConnection.current.ontrack = (event) => {
                         setremoteStream(event.streams[0]);
                         remoteVideoRef.current.srcObject = event.streams[0];
-                        console.log(event);
                     }
 
                     peerConnection.current.onicecandidate = (event) => {
                         if (event.candidate) {
-                            socket.emit('ice-candidate', event.candidate);
+                            socket.emit('ice-candidate', { candidate: event.candidate, recieverId: selectedUser._id });
                         }
 
                     }
                     const offer = await peerConnection.current.createOffer();
 
                     await peerConnection.current.setLocalDescription(offer);
-                    socket.emit('offer', offer);
-                    socket.emit("calling", { accept: true, callerId: authUser });
+                    socket.emit('offer', { offer, recieverId: selectedUser._id });
+                    socket.emit("calling", { accept: true, callerId: authUser, kind: callingType, recieverId: selectedUser._id });
                 }
 
             } catch (error) {
@@ -75,23 +75,28 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
 
     useEffect(() => {
         if (socket) {
-            socket.on('offer', async (offer) => {
+            socket.on('offer', async ({ offer }) => {
                 await peerConnection.current.setRemoteDescription(offer);
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const constraints = {
+                    video: callingType == 'video' ? true : false,
+                    audio: true
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 if (stream) {
                     localVideoRef.current.srcObject = stream;
                     stream.getTracks().forEach(track => peerConnection.current.addTrack(track, stream));
                     const answer = await peerConnection.current.createAnswer();
                     await peerConnection.current.setLocalDescription(answer);
-                    socket.emit('answer', answer);
+                    socket.emit('answer', { answer, recieverId: selectedUser._id });
                 }
             })
 
-            socket.on("answer", async (answer) => {
+            socket.on("answer", async ({ answer }) => {
                 await peerConnection.current.setRemoteDescription(answer);
             })
 
-            socket.on("ice-candidate", async (candidate) => {
+            socket.on("ice-candidate", async ({ candidate }) => {
                 await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
             })
 

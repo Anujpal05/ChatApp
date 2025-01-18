@@ -42,8 +42,8 @@ export const registerUser = async (req, res) => {
       const token = generateToken(payload);
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "None",
+        secure: false,
+        sameSite: "Lax",
       });
 
       return res
@@ -67,8 +67,8 @@ export const registerUser = async (req, res) => {
     const token = generateToken(payload);
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
+      secure: false,
+      sameSite: "Lax",
     });
 
     return res.status(200).json({
@@ -118,8 +118,7 @@ export const getAllUsers = async (req, res) => {
     const users = await Users.find()
       .select("-password")
       .sort({ createdAt: -1 });
-    console.log("users");
-    console.log(users);
+
     return res
       .status(200)
       .json({ message: "Retrieve all users successfully!", users });
@@ -128,12 +127,11 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-export const getUser = async (req, res) => {
+export const getUser = async (userId) => {
   try {
-    const { userId } = req.params;
     const user = await Users.findById(userId).select("-password");
-    return res.status(200).json({ message: "Retrieve user details!", user });
+    return { user, success: true };
   } catch (error) {
-    return res.status(500).json({ message: "Internal server error!" });
+    return { success: false };
   }
 };

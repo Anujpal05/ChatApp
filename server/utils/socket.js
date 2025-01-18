@@ -3,6 +3,7 @@ import http from "http";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
 import cors from "cors";
+import { getUser } from "../controllers/user.controller.js";
 export const app = express();
 export const server = http.createServer(app);
 dotenv.config();
@@ -34,6 +35,17 @@ io.on("connection", (socket) => {
   });
   socket.on("ice-candidate", (candidate) => {
     socket.broadcast.emit("ice-candidate", candidate);
+  });
+
+  socket.on("calling", async (data) => {
+    if (data?.callerId) {
+      const userData = await getUser(data?.callerId);
+      if (userData.success) {
+        data.userName = userData?.user?.userName;
+      }
+    }
+
+    socket.broadcast.emit("calling", data);
   });
 
   const userId = socket?.handshake?.query?.userId;

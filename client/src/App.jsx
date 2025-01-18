@@ -4,12 +4,13 @@ import Chat from './Pages/Chat'
 import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import { Toaster } from 'react-hot-toast';
+import { useEffect } from 'react';
 
 
 
 function App() {
-  const { isLogin } = useAuthStore();
-  console.log("Client URL " + import.meta.env.VITE_SERVER_URL)
+  const { isLogin, logOut } = useAuthStore();
+
 
   return (
     <>
@@ -17,7 +18,7 @@ function App() {
         <Toaster />
         <BrowserRouter>
           <Routes>
-            <Route path='/' element={!isLogin ? <Home /> : <Navigate to="/chat-section" />} />
+            <Route path='/' element={!isLogin && <Home />} />
             <Route path='/chat-section' element={isLogin && <Chat />} />
           </Routes>
         </BrowserRouter>

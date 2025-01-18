@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { BsFillSendFill } from "react-icons/bs";
 import '../App.css'
 import useAuthStore from '../store/authStore.js';
@@ -14,6 +14,7 @@ import getMessageTime from '../utils/getTime';
 import { IoMdCall } from "react-icons/io";
 import { FaVideo } from "react-icons/fa";
 import CallSection from './CallSection';
+import useCallStore from '../store/callStore';
 
 
 
@@ -22,12 +23,15 @@ const ChatSection = () => {
     const [isDisable, setIsDisable] = useState(true)
     const [imagePreview, setimagePreview] = useState(null)
     const [showImg, setshowImg] = useState(null)
+    const [ringtone, setringtone] = useState(null)
     const [showCall, setshowCall] = useState(false)
     const { selectedUser, setSelectedUser, sendMessage, setMessages, getMessages } = useChatStore();
     const { socket, connectSocket, disconnectSocket, authUser } = useAuthStore();
     const inputImg = useRef();
     const messages = useChatStore((state) => state.messages)
+    const [callingType, setcallingType] = useState(null)
     const { onlineUsers } = useAuthStore();
+    const { peerConnection, setupWebRTC } = useCallStore();
 
     useEffect(() => {
         connectSocket();
@@ -51,14 +55,85 @@ const ChatSection = () => {
 
                 setMessages(newMessage)
             });
-
         }
 
         return () => {
             socket.off("newMessage")
+            socket.off("calling");
         }
 
     }, [selectedUser, setMessages, getMessages])
+
+
+    useEffect(() => {
+        const audio = new Audio("https://res.cloudinary.com/dcfy1v0ab/video/upload/v1737173512/pgxlbwfcithhedlpwcrw.mp3");
+        audio.loop = true;
+        setringtone(audio)
+    }, [])
+
+
+    useEffect(() => {
+        if (socket && !showCall) {
+            const handleIncomingCall = (data) => {
+
+                console.log("Someone calling you");
+                console.log(data)
+                const div1 = document.createElement('div');
+                div1.className = " absolute top-0  text-white p-5 rounded-md flex flex-col items-center justify-center w-screen ";
+                const div2 = document.createElement("div");
+                div2.className = " bg-gray-600 p-3 flex flex-col gap-3 rounded-md";
+                const p = document.createElement('p');
+                const btnDiv = document.createElement('div');
+                btnDiv.className = "flex justify-between w-full";
+                const btn1 = document.createElement("button");
+                const btn2 = document.createElement("button");
+
+                if (ringtone && ringtone?.paused) {
+                    ringtone.play().catch(error => console.log("Audio play error : ", error));
+                }
+
+                p.textContent = `${data?.userName ? data.userName : "SomeOne"} calling you`
+
+                btn1.textContent = "Accept";
+                btn1.className = "bg-green-500 rounded-md px-2 py-1 "
+                btn1.onclick = () => {
+                    console.log(ringtone)
+                    setshowCall(true)
+                    div1.remove();
+                    socket.emit('calling', { accept: true });
+                }
+
+                btn2.textContent = "Cancel";
+                btn2.className = "bg-gray-500 rounded-md px-2 py-1"
+                btn2.onclick = () => {
+                    ringtone?.pause();
+                    div1.remove();
+                    socket.emit('calling', { accept: false });
+                }
+
+                btnDiv.appendChild(btn1);
+                btnDiv.appendChild(btn2);
+                div2.appendChild(p);
+                div2.appendChild(btnDiv)
+                div1.appendChild(div2);
+
+                document.body.appendChild(div1);
+            }
+
+            socket.on("calling", (data) => handleIncomingCall(data));
+
+        }
+
+        return () => {
+            socket?.off("calling")
+            if (ringtone) {
+                ringtone.pause();
+            }
+
+        }
+    }, [socket, showCall, ringtone])
+
+
 
     const messageSend = async (message) => {
         if (!message && !imagePreview) return;
@@ -117,9 +192,11 @@ const ChatSection = () => {
         link.click();
     }
 
-    const showCallSection = () => {
+    const showCallSection = (type) => {
         setshowCall(true)
+        setcallingType(type);
     }
+
 
     return (
         <>
@@ -134,8 +211,8 @@ const ChatSection = () => {
                             </div>
                         </div>
                         <div className=' space-x-5 px-3'>
-                            <button className=' text-blue-600 outline-none text-2xl' onClick={showCallSection}><a href={`#call:${selectedUser._id}`}> <FaVideo /></a></button>
-                            <button className=' text-blue-600 outline-none text-2xl' onClick={showCallSection}> <a href={`#call:${selectedUser._id}`}><IoMdCall /></a ></button>
+                            <button className=' text-blue-600 outline-none text-2xl' onClick={() => showCallSection('video')}><a href={`#call:${selectedUser._id}`}> <FaVideo /></a></button>
+                            <button className=' text-blue-600 outline-none text-2xl' onClick={() => showCallSection('audio')}> <a href={`#call:${selectedUser._id}`}><IoMdCall /></a ></button>
                             <button className=' text-2xl outline-none text-red-700 hover:text-[27px] hover:text-red-900' onClick={() => setSelectedUser(null)}><a href=''><RxCross2 /></a></button>
                         </div>
                     </div>
@@ -203,9 +280,10 @@ const ChatSection = () => {
 
             {
                 showCall && <div className=' '>
-                    <CallSection showCall={showCall} setshowCall={setshowCall} />
+                    <CallSection showCall={showCall} setshowCall={setshowCall} callingType={callingType} />
                 </div>
             }
+
         </>
     )
 }

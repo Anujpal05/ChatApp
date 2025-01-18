@@ -1,12 +1,16 @@
 import React, { useRef } from 'react'
 import { FaArrowRight } from "react-icons/fa6";
 import useAuthStore from '../store/authStore';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
 
     const userNameRef = useRef(null);
     const passwordRef = useRef(null);
+    const navigate = useNavigate();
     const { login } = useAuthStore();
+
+
 
     const register = async () => {
         const userName = userNameRef.current.value;

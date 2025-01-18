@@ -18,8 +18,9 @@ function App() {
         <Toaster />
         <BrowserRouter>
           <Routes>
-            <Route path='/' element={!isLogin && <Home />} />
-            <Route path='/chat-section' element={isLogin && <Chat />} />
+            <Route path='/' element={!isLogin ? <Home /> : <Navigate to={'/chat-section'} />} />
+            <Route path='/chat-section' element={isLogin ? <Chat /> : <Navigate to={'/'} />} />
+            <Route path='*' element={<Navigate to={'/'} />} />
           </Routes>
         </BrowserRouter>
       </div>

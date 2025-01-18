@@ -26,9 +26,9 @@ const useAuthStore = create(
 
       logOut: async () => {
         try {
-          const { data } = await axiosInstance.post("/user/logout");
           set({ isLogin: false });
           set({ authUser: null });
+          const { data } = await axiosInstance.post("/user/logout");
           useChatStore.getState().setSelectedUser(null);
           get().disconnectSocket();
           toast.success(data.message);

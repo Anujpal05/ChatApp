@@ -96,7 +96,7 @@ const ChatSection = () => {
                 btn1.onclick = () => {
                     showCallSection(data?.kind)
                     div1?.remove();
-                    socket.emit('calling', { accept: true, recieverId: selectedUser._id });
+                    socket.emit('calling', { accept: true, recieverId: selectedUser?._id });
                 }
 
                 btn2.textContent = "Cancel";
@@ -104,7 +104,7 @@ const ChatSection = () => {
                 btn2.onclick = () => {
                     ringtone?.pause();
                     div1?.remove();
-                    socket.emit('calling', { accept: false, recieverId: selectedUser._id });
+                    socket.emit('calling', { accept: false, recieverId: selectedUser?._id });
                 }
 
                 btnDiv.appendChild(btn1);
@@ -195,6 +195,7 @@ const ChatSection = () => {
 
     const showCallSection = (type) => {
         if (!onlineUsers.includes(selectedUser?._id)) {
+            socket.emit('calling', { accept: false, recieverId: selectedUser?._id });
             toast.error("User is Offline!");
             return;
         }
@@ -227,14 +228,14 @@ const ChatSection = () => {
                                 <div className='flex flex-col justify-between w-full' key={i}>
                                     {selectedUser._id == message.senderId && <>
                                         <div className=' self-start text-[12px] text-gray-500 font-semibold'>{getMessageTime(message.createdAt)}</div>
-                                        <div className='self-start bg-gray-700 max-w-[30%] p-1 px-2 rounded-lg'>
+                                        <div className='self-start bg-gray-700 max-w-[70%] lg:max-w-[30%] p-1 px-2 rounded-lg'>
                                             {message.image && <div ><img src={message.image} alt="image" onClick={() => showImage(message.image)} /></div>}
                                             <p onClick={() => getMessageTime(message.createdAt)}>{message.text}</p>
                                         </div>
                                     </>}
                                     {authUser == message.senderId && <>
                                         <div className=' self-end text-[12px] text-gray-500 font-semibold'>{getMessageTime(message.createdAt)}</div>
-                                        <div className=' self-end bg-green-700 max-w-[30%] p-1 px-2 rounded-lg'>
+                                        <div className=' self-end bg-green-700 max-w-[70%] lg:max-w-[30%] p-1 px-2 rounded-lg'>
                                             {message.image && <div><img src={message.image} alt="image" className=' h-40 w-40' onClick={() => showImage(message.image)} /></div>}
                                             <p onClick={() => getMessageTime(message.createdAt)}>{message.text}</p>
                                         </div>

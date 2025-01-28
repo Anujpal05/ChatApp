@@ -65,6 +65,8 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
         }
 
         if (showCall) {
+            const notification = document.getElementsByClassName('.call-notification')[0];
+            notification?.remove();
             MakeCall();
         }
 
@@ -75,8 +77,6 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
             socket.off("calling");
         }
     }, [showCall])
-
-
 
 
     useEffect(() => {
@@ -155,16 +155,19 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
     return (
         <div className=' absolute top-0 left-0 h-screen w-screen  text-white flex justify-center items-center'>
             <div className='  bg-gray-800 lg:h-[80%] lg:w-[80%] h-full w-full flex justify-center items-center relative bg-cover rounded-md' style={{ backgroundImage: "url('https://res.cloudinary.com/dcfy1v0ab/image/upload/v1737040206/brvvhxbkqdta143xtoly.jpg')" }}>
-                <div className=' flex justify-center '>
-                    <video ref={remoteVideoRef} autoPlay controls={false} playsInline id='peerPlayer' className='h-[95%] w-[95%] '  ></video>
+                <div className=' flex justify-center h-[95%] w-[95%]'>
+                    <video ref={remoteVideoRef} autoPlay controls={false} playsInline id='peerPlayer' className=' w-full  '  ></video>
                 </div>
-                <div className=' absolute lg:bottom-2 bottom-6 right-2 text-white px-3 flex justify-end'>
-                    <video ref={localVideoRef} autoPlay id='localPlayer' controls={false} playsInline className=' lg:h-72 lg:w-72 h-32 w-32' ></video>
+                <div className=' absolute lg:bottom-[-20px] bottom-2 right-1 lg:right-2 text-white px-3 flex justify-end'>
+                    <video ref={localVideoRef} autoPlay id='localPlayer' controls={false} playsInline className=' lg:h-60 lg:w-60 h-36 w-36' ></video>
                 </div>
 
                 <button className=' text-gray-400 bg-red-600 hover:bg-red-700 transition-all duration-300 ease-in-out px-5 rounded-3xl absolute bottom-3  outline-none text-4xl ' onClick={callDisconnected}>
                     <PiPhoneDisconnect />
                 </button>
+                {callingType != 'video' && <div className=' absolute '>
+                    <img src={profileImg} alt="profileImg" className='h-80 bg-gray-700 rounded-full' />
+                </div>}
             </div>
         </div>
     )

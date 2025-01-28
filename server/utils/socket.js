@@ -29,15 +29,15 @@ io.on("connection", (socket) => {
 
   socket.on("offer", ({ offer, recieverId }) => {
     const receiverSocketId = onlineUsersMap[recieverId];
-    io.to(receiverSocketId).emit("offer", offer);
+    io.to(receiverSocketId).emit("offer", { offer });
   });
   socket.on("answer", ({ answer, recieverId }) => {
     const receiverSocketId = onlineUsersMap[recieverId];
-    io.to(receiverSocketId).emit("answer", answer);
+    io.to(receiverSocketId).emit("answer", { answer });
   });
   socket.on("ice-candidate", ({ candidate, recieverId }) => {
     const receiverSocketId = onlineUsersMap[recieverId];
-    io.to(receiverSocketId).emit("ice-candidate", candidate);
+    io.to(receiverSocketId).emit("ice-candidate", { candidate });
   });
 
   socket.on("calling", async (data) => {

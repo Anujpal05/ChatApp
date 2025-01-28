@@ -10,6 +10,10 @@
   animation: show-image 1s ease-in-out;
 }
 
+.show-sidebar {
+  animation: show-sidebar 0.3s ease-out;
+}
+
 @keyframes chat-icon {
   0% {
     transform: translate(2px, 0px);
@@ -28,5 +32,16 @@
   }
   100% {
     scale: 100%;
+  }
+}
+
+@keyframes show-sidebar {
+  0% {
+    position: relative;
+    top: 30px;
+  }
+  100% {
+    position: relative;
+    top: 0px;
   }
 }

@@ -4,13 +4,11 @@ import Chat from './Pages/Chat'
 import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import { Toaster } from 'react-hot-toast';
-import { useEffect } from 'react';
 
 
 
 function App() {
-  const { isLogin, logOut } = useAuthStore();
-  console.log(isLogin)
+  const { isLogin } = useAuthStore();
 
   return (
     <>

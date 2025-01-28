@@ -1,17 +1,23 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { FaRegEdit } from "react-icons/fa";
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { LuMessageCircleMore } from "react-icons/lu";
+import { MdAddCall } from "react-icons/md";
 import { BiLogOut } from "react-icons/bi";
 import { axiosInstance } from '../../utils/axios';
 import useAuthStore from '../store/authStore';
 import useChatStore from '../store/chatStore';
 import profileImg from '../assets/image/profile.png'
 import { RotatingLines } from 'react-loader-spinner'
+import useCallStore from '../store/callStore';
+import CallSidebar from './CallSidebar';
 
 
 const Sidebar = () => {
     const [users, setusers] = useState()
     const [filterUsers, setfilterUsers] = useState()
+    const [filterCalls, setfilterCalls] = useState();
+    const [showBox, setshowBox] = useState('messageBox');
     const [loader, setloader] = useState(true);
+    const { callHistory, getAllCall } = useCallStore();
     const { selectedUser, setSelectedUser } = useChatStore();
     const { logOut, onlineUsers, authUser } = useAuthStore();
     const searchRef = useRef();
@@ -30,6 +36,27 @@ const Sidebar = () => {
         getAllUsers();
     }, [])
 
+
+    useEffect(() => {
+        const fetch = async () => {
+            try {
+                await getAllCall(authUser);
+            } catch (error) {
+                console.log(error)
+            }
+        }
+
+        if (authUser) {
+            fetch();
+        }
+
+    }, [authUser])
+
+    useEffect(() => {
+        setfilterCalls(callHistory);
+    }, [callHistory])
+
+
     useEffect(() => {
         setusers(filterUsers)
         if (filterUsers) {
@@ -37,11 +64,15 @@ const Sidebar = () => {
         }
     }, [filterUsers])
 
-
     const handleInput = (e) => {
         const value = e.target?.value?.toLowerCase().trim();
-        const filterUser = filterUsers && filterUsers.filter(user => user?.userName?.toLowerCase()?.includes(value));
-        setusers(filterUser);
+        if (showBox == 'messageBox') {
+            const filterUser = filterUsers && filterUsers.filter(user => user?.userName?.toLowerCase()?.includes(value));
+            setusers(filterUser);
+        } else if (showBox == 'callBox') {
+            const filterCall = callHistory && callHistory.filter(call => call?.callerId?.userName?.toLowerCase().includes(value));
+            setfilterCalls(filterCall)
+        }
     }
 
     return (
@@ -49,15 +80,16 @@ const Sidebar = () => {
             <div className=' max-h-[20vh] px-3 py-2'>
                 <div className=' flex justify-between'>
                     <h1 className=' text-2xl font-semibold'>Chats</h1>
-                    <div className=' flex text-2xl relative'>
-                        <div ><FaRegEdit /></div>
-                        <div onClick={logOut} className=' cursor-pointer hover:scale-105 text-red-600 pl-5 pr-3  '><BiLogOut />
-                        </div>
+                    <div className=' flex text-2xl relative gap-4'>
+                        <button className=' cursor-pointer outline-none text-yellow-500' onClick={() => setshowBox('messageBox')}><LuMessageCircleMore /></button>
+                        <button className=' cursor-pointer outline-none text-blue-500' onClick={() => setshowBox("callBox")}><MdAddCall /></button>
+                        <button onClick={logOut} className=' cursor-pointer hover:scale-105 text-red-600 outline-none '><BiLogOut />
+                        </button>
                     </div>
                 </div>
                 <div className='py-2'><input ref={searchRef} onChange={handleInput} type="text" name="search" id="search" placeholder='Search' autoComplete='off' className=' p-1 w-full px-3 bg-gray-900 border-b-[1px] border-gray-400 rounded-md outline-none appearance-none' /></div>
             </div>
-            {users && !loader && <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow '>
+            {showBox == 'messageBox' && users && !loader && <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow pb-2 show-sidebar '>
                 <ul className=' space-y-1'>
                     {users.length > 0 && users.map((user, i) => (
                         <li className={` hover:bg-gray-800 p-2 rounded-md transition-all duration-300 ease-in-out ${selectedUser?._id === user._id ? 'bg-gray-800 ' : ""}`} onClick={() => setSelectedUser(user)} key={i}>
@@ -74,6 +106,12 @@ const Sidebar = () => {
                     ))}
                 </ul>
             </div>}
+
+            {
+                showBox == 'callBox' && <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow pb-2 show-sidebar'>
+                    <CallSidebar filterCalls={filterCalls} />
+                </div>
+            }
 
             {users && users.length == 0 && !loader && <div className=' px-2 text-red-500'> Not Found!</div>}
 

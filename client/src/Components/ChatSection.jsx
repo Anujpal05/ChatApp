@@ -14,7 +14,7 @@ import getMessageTime from '../utils/getTime';
 import { IoMdCall } from "react-icons/io";
 import { FaVideo } from "react-icons/fa";
 import CallSection from './CallSection';
-import useCallStore from '../store/callStore';
+import { useNavigate } from 'react-router-dom';
 
 
 
@@ -31,7 +31,6 @@ const ChatSection = () => {
     const messages = useChatStore((state) => state.messages)
     const [callingType, setcallingType] = useState(null)
     const { onlineUsers } = useAuthStore();
-    const { peerConnection, setupWebRTC } = useCallStore();
 
     useEffect(() => {
         connectSocket();
@@ -73,12 +72,11 @@ const ChatSection = () => {
 
     useEffect(() => {
         if (socket && !showCall) {
+            let div1;
             const handleIncomingCall = (data) => {
 
-                console.log("Someone calling you");
-                console.log(data)
-                const div1 = document.createElement('div');
-                div1.className = " absolute top-0  text-white p-5 rounded-md flex flex-col items-center justify-center w-screen ";
+                div1 = document.createElement('div');
+                div1.className = " call-notification absolute top-0  text-white p-5 rounded-md flex flex-col items-center justify-center w-screen ";
                 const div2 = document.createElement("div");
                 div2.className = " bg-gray-600 p-3 flex flex-col gap-3 rounded-md";
                 const p = document.createElement('p');
@@ -87,16 +85,15 @@ const ChatSection = () => {
                 const btn1 = document.createElement("button");
                 const btn2 = document.createElement("button");
 
-                if (ringtone && ringtone?.paused) {
-                    ringtone.play().catch(error => console.log("Audio play error : ", error));
-                }
+                // if (ringtone && ringtone?.paused) {
+                //     ringtone.play().catch(error => console.log("Audio play error : ", error));
+                // }
 
                 p.textContent = `${data?.userName ? data.userName : "SomeOne"} calling you`
 
                 btn1.textContent = "Accept";
                 btn1.className = "bg-green-500 rounded-md px-2 py-1 "
                 btn1.onclick = () => {
-                    console.log(ringtone)
                     showCallSection(data?.kind)
                     div1.remove();
                     socket.emit('calling', { accept: true, recieverId: selectedUser._id });
@@ -107,7 +104,7 @@ const ChatSection = () => {
                 btn2.onclick = () => {
                     ringtone?.pause();
                     div1.remove();
-                    socket.emit('calling', { accept: false });
+                    socket.emit('calling', { accept: false, recieverId: selectedUser._id });
                 }
 
                 btnDiv.appendChild(btn1);
@@ -119,7 +116,13 @@ const ChatSection = () => {
                 document.body.appendChild(div1);
             }
 
-            socket.on("calling", (data) => handleIncomingCall(data));
+            socket.on("calling", (call) => {
+                if (call.accept) {
+                    handleIncomingCall(call)
+                } else if (!call.accept) {
+                    div1.remove();
+                }
+            });
 
         }
 
@@ -128,7 +131,6 @@ const ChatSection = () => {
             if (ringtone) {
                 ringtone.pause();
             }
-
         }
     }, [socket, showCall, ringtone])
 
@@ -192,6 +194,10 @@ const ChatSection = () => {
     }
 
     const showCallSection = (type) => {
+        if (!onlineUsers.includes(selectedUser._id)) {
+            toast.error("User is Offline!");
+            return;
+        }
         setshowCall(true)
         setcallingType(type);
     }
@@ -212,7 +218,7 @@ const ChatSection = () => {
                         <div className=' space-x-5 px-3'>
                             <button className=' text-blue-600 outline-none text-2xl' onClick={() => showCallSection('video')}><a href={`#call:${selectedUser._id}`}> <FaVideo /></a></button>
                             <button className=' text-blue-600 outline-none text-2xl' onClick={() => showCallSection('audio')}> <a href={`#call:${selectedUser._id}`}><IoMdCall /></a ></button>
-                            <button className=' text-2xl outline-none text-red-700 hover:text-[27px] hover:text-red-900' onClick={() => setSelectedUser(null)}><a href=''><RxCross2 /></a></button>
+                            <button className=' text-2xl outline-none text-red-700 hover:text-[27px] hover:text-red-900' onClick={() => setSelectedUser(null)}><><RxCross2 /></></button>
                         </div>
                     </div>
                     <div className=' flex-grow overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 mb-10 ' style={{ backgroundImage: `url('https://res.cloudinary.com/dcfy1v0ab/image/upload/v1736671906/sigegsbfbfcveg3x4mph.jpg')` }}>

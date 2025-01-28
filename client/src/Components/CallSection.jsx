@@ -4,12 +4,16 @@ import { RxCross2 } from "react-icons/rx";
 import profileImg from '../assets/image/profile.png'
 import useAuthStore from '../store/authStore';
 import useChatStore from '../store/chatStore';
+import toast from 'react-hot-toast';
+import { axiosInstance } from '../../utils/axios';
+import useCallStore from '../store/callStore';
 
 const CallSection = ({ showCall, setshowCall, callingType }) => {
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
-    const [remoteStream, setremoteStream] = useState(null)
-    const { socket, authUser, selectedUser } = useAuthStore();
+    const { socket, authUser } = useAuthStore();
+    const { selectedUser } = useChatStore();
+    const { addNewCall, getAllCall } = useCallStore();
 
     const configuration = {
         iceServers: [
@@ -20,14 +24,15 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
     const peerConnection = useRef(new RTCPeerConnection(configuration));
 
     useEffect(() => {
-        const setupCall = async () => {
+        const MakeCall = async () => {
             try {
                 const constraints = {
-                    video: callingType == 'video' ? true : false,
+                    video: callingType == 'video',
                     audio: true
                 }
 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
                 if (stream) {
                     localVideoRef.current.srcObject = stream;
 
@@ -36,9 +41,11 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                     })
 
                     peerConnection.current.ontrack = (event) => {
-                        setremoteStream(event.streams[0]);
-                        remoteVideoRef.current.srcObject = event.streams[0];
+                        if (remoteVideoRef.current) {
+                            remoteVideoRef.current.srcObject = event.streams[0];
+                        }
                     }
+
 
                     peerConnection.current.onicecandidate = (event) => {
                         if (event.candidate) {
@@ -47,7 +54,6 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
 
                     }
                     const offer = await peerConnection.current.createOffer();
-
                     await peerConnection.current.setLocalDescription(offer);
                     socket.emit('offer', { offer, recieverId: selectedUser._id });
                     socket.emit("calling", { accept: true, callerId: authUser, kind: callingType, recieverId: selectedUser._id });
@@ -59,7 +65,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
         }
 
         if (showCall) {
-            setupCall();
+            MakeCall();
         }
 
         return () => {
@@ -75,25 +81,46 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
 
     useEffect(() => {
         if (socket) {
-            socket.on('offer', async ({ offer }) => {
-                await peerConnection.current.setRemoteDescription(offer);
-                const constraints = {
-                    video: callingType == 'video' ? true : false,
-                    audio: true
-                }
+            try {
+                socket.on('offer', async ({ offer }) => {
+                    await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
 
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                if (stream) {
-                    localVideoRef.current.srcObject = stream;
-                    stream.getTracks().forEach(track => peerConnection.current.addTrack(track, stream));
-                    const answer = await peerConnection.current.createAnswer();
-                    await peerConnection.current.setLocalDescription(answer);
-                    socket.emit('answer', { answer, recieverId: selectedUser._id });
-                }
-            })
+                    const constraints = {
+                        video: callingType == 'video',
+                        audio: true
+                    }
+
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    if (stream) {
+                        localVideoRef.current.srcObject = stream;
+                        stream.getTracks().forEach(track => peerConnection.current.addTrack(track, stream));
+                        const answer = await peerConnection.current.createAnswer();
+                        await peerConnection.current.setLocalDescription(answer);
+                        socket.emit('answer', { answer, recieverId: selectedUser._id });
+                    }
+                })
+            } catch (error) {
+                console.log(error)
+            }
+
 
             socket.on("answer", async ({ answer }) => {
-                await peerConnection.current.setRemoteDescription(answer);
+
+                try {
+                    await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+                    const payload = {
+                        callerId: authUser,
+                        receiverId: selectedUser._id,
+                        kind: 'Video'
+                    }
+
+                    //Add Call Info in database
+                    await addNewCall(payload);
+                    await getAllCall(authUser);
+                } catch (error) {
+                    console.log(error)
+                }
+
             })
 
             socket.on("ice-candidate", async ({ candidate }) => {
@@ -108,17 +135,19 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
         }
     }, [socket])
 
-
     const disconnectCall = () => {
         localVideoRef.current.srcObject?.getTracks().forEach(track => track.stop());
         remoteVideoRef.current.srcObject?.getTracks().forEach(track => track.stop());
         setshowCall(false);
+        toast.success("Call disconnected!");
     }
 
     const callDisconnected = () => {
-        socket?.emit("calling", { accept: false });
+        socket?.emit("calling", { accept: false, recieverId: selectedUser._id });
         disconnectCall();
     }
+
+
 
     return (
         <div className=' absolute top-0 left-0 h-screen w-screen  text-white flex justify-center items-center'>

@@ -50,28 +50,6 @@ const useChatStore = create(
       clearMessages: async () => {
         set({ messages: [] });
       },
-      subscribeToMessages: async () => {
-        const { selectedUser } = get();
-        if (!selectedUser) return;
-
-        const socket = useAuthStore.getState().socket;
-        if (!socket) return;
-
-        socket.on("newMessage", (newMessage) => {
-          console.log("new Mwsg", newMessage);
-          // const isMessageSentFromSelectedUser =
-          //   newMessage.senderId === selectedUser._id;
-          // if (!isMessageSentFromSelectedUser) return;
-
-          set((state) => ({ messages: [...state.messages, newMessage] }));
-        });
-      },
-      unsubscribeFromMessage: async () => {
-        const socket = useAuthStore.getState().socket;
-        if (socket) {
-          socket.off("newMessage");
-        }
-      },
     }),
     {
       name: "chat-store",

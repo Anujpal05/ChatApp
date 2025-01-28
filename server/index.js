@@ -6,6 +6,7 @@ import { app, server } from "./utils/socket.js";
 import userRouter from "./routes/user.routes.js";
 import cookieParser from "cookie-parser";
 import messageRouter from "./routes/message.route.js";
+import callRouter from "./routes/call.route.js";
 dotenv.config();
 const PORT = process.env.PORT || 5001;
 
@@ -24,6 +25,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use("/api/user", userRouter);
 app.use("/api/message", messageRouter);
+app.use("/api/call", callRouter);
 
 app.get("/", (req, res) => {
   res.status(200).send(`<h1>Server is running on port ${PORT}</h1>`);

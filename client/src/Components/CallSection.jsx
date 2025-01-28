@@ -32,7 +32,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                 }
 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
+                console.log(stream)
                 if (stream) {
                     localVideoRef.current.srcObject = stream;
 
@@ -49,14 +49,14 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
 
                     peerConnection.current.onicecandidate = (event) => {
                         if (event.candidate) {
-                            socket.emit('ice-candidate', { candidate: event.candidate, recieverId: selectedUser._id });
+                            socket.emit('ice-candidate', { candidate: event.candidate, recieverId: selectedUser?._id });
                         }
 
                     }
                     const offer = await peerConnection.current.createOffer();
                     await peerConnection.current.setLocalDescription(offer);
-                    socket.emit('offer', { offer, recieverId: selectedUser._id });
-                    socket.emit("calling", { accept: true, callerId: authUser, kind: callingType, recieverId: selectedUser._id });
+                    socket.emit('offer', { offer, recieverId: selectedUser?._id });
+                    socket.emit("calling", { accept: true, callerId: authUser, kind: callingType, recieverId: selectedUser?._id });
                 }
 
             } catch (error) {
@@ -83,6 +83,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
         if (socket) {
             try {
                 socket.on('offer', async ({ offer }) => {
+                    console.log({ "offer": offer })
                     await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
 
                     const constraints = {
@@ -96,7 +97,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                         stream.getTracks().forEach(track => peerConnection.current.addTrack(track, stream));
                         const answer = await peerConnection.current.createAnswer();
                         await peerConnection.current.setLocalDescription(answer);
-                        socket.emit('answer', { answer, recieverId: selectedUser._id });
+                        socket.emit('answer', { answer, recieverId: selectedUser?._id });
                     }
                 })
             } catch (error) {
@@ -107,10 +108,11 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
             socket.on("answer", async ({ answer }) => {
 
                 try {
+                    console.log({ answer })
                     await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
                     const payload = {
                         callerId: authUser,
-                        receiverId: selectedUser._id,
+                        receiverId: selectedUser?._id,
                         kind: 'Video'
                     }
 
@@ -124,6 +126,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
             })
 
             socket.on("ice-candidate", async ({ candidate }) => {
+                console.log({ candidate })
                 await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
             })
 
@@ -143,7 +146,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
     }
 
     const callDisconnected = () => {
-        socket?.emit("calling", { accept: false, recieverId: selectedUser._id });
+        socket?.emit("calling", { accept: false, recieverId: selectedUser?._id });
         disconnectCall();
     }
 

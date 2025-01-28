@@ -95,7 +95,7 @@ const ChatSection = () => {
                 btn1.className = "bg-green-500 rounded-md px-2 py-1 "
                 btn1.onclick = () => {
                     showCallSection(data?.kind)
-                    div1.remove();
+                    div1?.remove();
                     socket.emit('calling', { accept: true, recieverId: selectedUser._id });
                 }
 
@@ -103,7 +103,7 @@ const ChatSection = () => {
                 btn2.className = "bg-gray-500 rounded-md px-2 py-1"
                 btn2.onclick = () => {
                     ringtone?.pause();
-                    div1.remove();
+                    div1?.remove();
                     socket.emit('calling', { accept: false, recieverId: selectedUser._id });
                 }
 
@@ -117,10 +117,10 @@ const ChatSection = () => {
             }
 
             socket.on("calling", (call) => {
-                if (call.accept) {
+                if (call?.accept) {
                     handleIncomingCall(call)
                 } else if (!call.accept) {
-                    div1.remove();
+                    div1?.remove();
                 }
             });
 
@@ -194,7 +194,7 @@ const ChatSection = () => {
     }
 
     const showCallSection = (type) => {
-        if (!onlineUsers.includes(selectedUser._id)) {
+        if (!onlineUsers.includes(selectedUser?._id)) {
             toast.error("User is Offline!");
             return;
         }
@@ -222,7 +222,7 @@ const ChatSection = () => {
                         </div>
                     </div>
                     <div className=' flex-grow overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 mb-10 ' style={{ backgroundImage: `url('https://res.cloudinary.com/dcfy1v0ab/image/upload/v1736671906/sigegsbfbfcveg3x4mph.jpg')` }}>
-                        {selectedUser && messages && <div className=' flex flex-col gap-2 w-full p-5 msg-container h-full' >
+                        {selectedUser && messages && <div className=' flex flex-col gap-2 w-full p-5 msg-container flex-grow h-full' >
                             {messages.length > 0 && messages.map((message, i) => (
                                 <div className='flex flex-col justify-between w-full' key={i}>
                                     {selectedUser._id == message.senderId && <>
@@ -261,7 +261,7 @@ const ChatSection = () => {
                     {imagePreview && <div className=' absolute lg:h-36 lg:w-36 h-20 w-20 bottom-14 left-5 '><img src={imagePreview} alt="imagePreview" className=' h-full w-full object-cover border-2 border-gray-600 rounded-md  ' />
                         <span className=' relative lg:bottom-[146px] lg:left-[130px] text-red-500  bottom-[82px] left-[68px] cursor-pointer ' onClick={() => setimagePreview(null)}><RxCross2 /></span>
                     </div>}
-                    <div className=' h-[22vh]'>
+                    <div className=' h-[6vh]'>
                         <div className=' absolute bottom-4 px-5 w-full flex gap-3'>
                             <input ref={messageRef} type="text" name="message" id="message" autoComplete='off' className=' flex-grow p-2 outline-none appearance-none bg-gray-900 px-2 rounded-md text-[15px]' placeholder='Type a message' onKeyDown={handleKeyPress} onChange={handleInput} />
                             <input type="file" accept='image/*' name="" id="" ref={inputImg} className='hidden outline-none' onChange={handleImageChange} />

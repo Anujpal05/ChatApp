@@ -162,11 +162,11 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                     <video ref={localVideoRef} autoPlay id='localPlayer' controls={false} playsInline className=' lg:h-60 lg:w-60 h-36 w-36' ></video>
                 </div>
 
-                <button className=' text-gray-400 bg-red-600 hover:bg-red-700 transition-all duration-300 ease-in-out px-5 rounded-3xl absolute bottom-3  outline-none text-4xl ' onClick={callDisconnected}>
+                <button className=' text-gray-400 bg-red-600 hover:bg-red-700 transition-all duration-300 ease-in-out px-5 rounded-3xl absolute bottom-5  outline-none text-4xl ' onClick={callDisconnected}>
                     <PiPhoneDisconnect />
                 </button>
                 {callingType != 'video' && <div className=' absolute '>
-                    <img src={profileImg} alt="profileImg" className='h-80 bg-gray-700 rounded-full' />
+                    <img src={profileImg} alt="profileImg" className='h-52 lg:h-80 bg-gray-700 rounded-full' />
                 </div>}
             </div>
         </div>

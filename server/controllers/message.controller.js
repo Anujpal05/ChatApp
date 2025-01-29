@@ -64,13 +64,20 @@ export const sendMessage = async (req, res) => {
       image: imageUrl,
     });
 
-    newMessage.save();
-
     const receiverSocketId = getReceiverSocketId(receiverId);
+    const time = Date.now();
 
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage);
+      io.to(receiverSocketId).emit("newMessage", {
+        senderId,
+        receiverId,
+        text,
+        image: imageUrl,
+        createdAt: time,
+      });
     }
+
+    newMessage.save();
 
     return res.status(200).json({ newMessage });
   } catch (error) {

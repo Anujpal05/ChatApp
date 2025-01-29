@@ -23,9 +23,9 @@ const CallInfo = () => {
     return (
         <>
             <div className=' border-2 border-gray-700 rounded-md h-fit w-full show-sidebar'>
-                <div className=' flex justify-between p-3 border-b-2 border-gray-700'>
+                <div className=' flex justify-between p-2 lg:p-3 border-b-2 border-gray-700'>
                     <h1 className=' font-semibold'>Call Info</h1>
-                    <button className=' outline-none hover:text-[105%] transition-all duration-300 ease-in-out' onClick={() => setSelectedCall(null)}><RxCross2 /></button>
+                    <button className=' outline-none hover:text-[23px] transition-all text-xl duration-300 ease-in-out' onClick={() => setSelectedCall(null)}><RxCross2 /></button>
                 </div>
                 <div className=' p-3 border-b-2 border-gray-700 flex justify-between'>
                     <div className='  flex items-center gap-4'>

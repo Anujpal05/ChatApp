@@ -20,8 +20,8 @@ const CallSidebar = ({ filterCalls }) => {
         <ul className=' space-y-1'>
           {filterCalls.length > 0 && filterCalls.map((call, i) => (
             <li className={` hover:bg-gray-800 p-2 rounded-md transition-all duration-300 ease-in-out`} key={i}>
-              <div className=' flex justify-between items-center gap-4' onClick={() => setSelectedCall(call)}>
-                <div className=' flex items-center gap-4 px-3'>
+              <div className=' flex justify-between items-center gap-4 w-full' onClick={() => setSelectedCall(call)}>
+                <div className=' flex items-center gap-4 px-1 lg:px-3'>
                   <img src={profileImg} alt="profileImg" className='  h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300 ' />
                   <div className=''>
                     <p className=' font-semibold text-xl text-center'>{call.callerId._id == authUser ? call.receiverId.userName : call.callerId.userName}</p>

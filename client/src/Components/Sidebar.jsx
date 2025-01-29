@@ -17,7 +17,7 @@ const Sidebar = () => {
     const [filterCalls, setfilterCalls] = useState();
     const [showBox, setshowBox] = useState('messageBox');
     const [loader, setloader] = useState(true);
-    const { callHistory, getAllCall } = useCallStore();
+    const { callHistory, getAllCall, selectedCall, setSelectedCall } = useCallStore();
     const { selectedUser, setSelectedUser } = useChatStore();
     const { logOut, onlineUsers, authUser } = useAuthStore();
     const searchRef = useRef();
@@ -81,13 +81,13 @@ const Sidebar = () => {
                 <div className=' flex justify-between'>
                     <h1 className=' text-2xl font-semibold'>Chats</h1>
                     <div className=' flex text-2xl relative gap-4'>
-                        <button className=' cursor-pointer outline-none text-yellow-500' onClick={() => setshowBox('messageBox')}><LuMessageCircleMore /></button>
+                        <button className=' cursor-pointer outline-none text-yellow-500' onClick={() => { setshowBox('messageBox'); setSelectedCall(null); }}><LuMessageCircleMore /></button>
                         <button className=' cursor-pointer outline-none text-blue-500' onClick={() => setshowBox("callBox")}><MdAddCall /></button>
                         <button onClick={logOut} className=' cursor-pointer hover:scale-105 text-red-600 outline-none '><BiLogOut />
                         </button>
                     </div>
                 </div>
-                <div className='py-2'><input ref={searchRef} onChange={handleInput} type="text" name="search" id="search" placeholder='Search' autoComplete='off' className=' p-1 w-full px-3 bg-gray-900 border-b-[1px] border-gray-400 rounded-md outline-none appearance-none' /></div>
+                <div className={`py-2 ${selectedCall ? "hidden lg:block " : "block"}`}><input ref={searchRef} onChange={handleInput} type="text" name="search" id="search" placeholder='Search' autoComplete='off' className=' p-1 w-full px-3 bg-gray-900 border-b-[1px] border-gray-400 rounded-md outline-none appearance-none' /></div>
             </div>
             {showBox == 'messageBox' && users && !loader && <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow pb-2 show-sidebar '>
                 <ul className=' space-y-1'>
@@ -108,7 +108,7 @@ const Sidebar = () => {
             </div>}
 
             {
-                showBox == 'callBox' && <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow pb-2 show-sidebar'>
+                showBox == 'callBox' && <div className={` overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow pb-2 show-sidebar ${!selectedCall ? 'block' : ' hidden lg:block'}`}>
                     <CallSidebar filterCalls={filterCalls} />
                 </div>
             }

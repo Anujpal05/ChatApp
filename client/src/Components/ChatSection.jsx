@@ -46,13 +46,12 @@ const ChatSection = () => {
         if (!socket) return;
 
         if (socket) {
-
+            console.log(socket?.id)
             socket.on("newMessage", (newMessage) => {
                 const isMessageSentFromSelectedUser =
                     newMessage.senderId === selectedUser._id;
                 if (!isMessageSentFromSelectedUser) return;
-
-                setMessages(newMessage)
+                setMessages(newMessage);
             });
         }
 
@@ -142,7 +141,8 @@ const ChatSection = () => {
         messageRef.current.value = ''
         setIsDisable(true);
         setimagePreview(null)
-        sendMessage({ text: message, image: imagePreview });
+        const time = Date.now();
+        sendMessage({ text: message, image: imagePreview, senderId: authUser, recieverId: selectedUser._id, createdAt: time });
     }
 
 
@@ -203,6 +203,17 @@ const ChatSection = () => {
         setcallingType(type);
     }
 
+    useEffect(() => {
+        const msgContainer = document.getElementsByClassName("msg-container")[0];
+        if (msgContainer) {
+            msgContainer.scrollTo({
+                top: msgContainer.scrollHeight,
+                behavior: "smooth"
+            })
+        }
+    }, [messages])
+
+
 
     return (
         <>
@@ -222,21 +233,21 @@ const ChatSection = () => {
                             <button className=' text-2xl outline-none text-red-700 hover:text-[27px] hover:text-red-900' onClick={() => setSelectedUser(null)}><><RxCross2 /></></button>
                         </div>
                     </div>
-                    <div className=' flex-grow overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 mb-10 ' style={{ backgroundImage: `url('https://res.cloudinary.com/dcfy1v0ab/image/upload/v1736671906/sigegsbfbfcveg3x4mph.jpg')` }}>
-                        {selectedUser && messages && <div className=' flex flex-col gap-2 w-full p-5 msg-container flex-grow h-full' >
+                    <div className=' msg-container flex-grow overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 mb-[70px] ' style={{ backgroundImage: `url('https://res.cloudinary.com/dcfy1v0ab/image/upload/v1736671906/sigegsbfbfcveg3x4mph.jpg')` }}>
+                        {selectedUser && messages && <div className=' flex flex-col gap-2 w-full p-2 lg:p-5 msg-container flex-grow h-full' >
                             {messages.length > 0 && messages.map((message, i) => (
                                 <div className='flex flex-col justify-between w-full' key={i}>
                                     {selectedUser._id == message.senderId && <>
                                         <div className=' self-start text-[12px] text-gray-500 font-semibold'>{getMessageTime(message.createdAt)}</div>
-                                        <div className='self-start bg-gray-700 max-w-[70%] lg:max-w-[30%] p-1 px-2 rounded-lg'>
-                                            {message.image && <div ><img src={message.image} alt="image" onClick={() => showImage(message.image)} /></div>}
+                                        <div className='self-start w-fit bg-gray-700 max-w-[40%] lg:max-w-[70%] p-1 px-2 rounded-lg '>
+                                            {message.image && <div ><img src={message.image} alt="image" className=' h-40 w-40 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
                                             <p onClick={() => getMessageTime(message.createdAt)}>{message.text}</p>
                                         </div>
                                     </>}
                                     {authUser == message.senderId && <>
                                         <div className=' self-end text-[12px] text-gray-500 font-semibold'>{getMessageTime(message.createdAt)}</div>
-                                        <div className=' self-end bg-green-700 max-w-[70%] lg:max-w-[30%] p-1 px-2 rounded-lg'>
-                                            {message.image && <div><img src={message.image} alt="image" className=' h-40 w-40' onClick={() => showImage(message.image)} /></div>}
+                                        <div className=' self-end w-fit  bg-green-700 max-w-[40%] lg:max-w-[70%] p-1 px-2 rounded-lg '>
+                                            {message.image && <div><img src={message.image} alt="image" className=' h-40 w-40 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
                                             <p onClick={() => getMessageTime(message.createdAt)}>{message.text}</p>
                                         </div>
                                     </>}

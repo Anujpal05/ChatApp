@@ -1,11 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { PiPhoneDisconnect } from "react-icons/pi";
-import { RxCross2 } from "react-icons/rx";
-import profileImg from '../assets/image/profile.png'
 import useAuthStore from '../store/authStore';
 import useChatStore from '../store/chatStore';
 import toast from 'react-hot-toast';
-import { axiosInstance } from '../../utils/axios';
 import useCallStore from '../store/callStore';
 
 const CallSection = ({ showCall, setshowCall, callingType }) => {
@@ -110,10 +107,11 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                 try {
                     console.log({ answer })
                     await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+
                     const payload = {
                         callerId: authUser,
                         receiverId: selectedUser?._id,
-                        kind: 'Video'
+                        kind: callingType == "audio" ? 'Audio' : 'Video'
                     }
 
                     //Add Call Info in database
@@ -166,7 +164,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                     <PiPhoneDisconnect />
                 </button>
                 {callingType != 'video' && <div className=' absolute '>
-                    <img src={profileImg} alt="profileImg" className='h-52 lg:h-80 bg-gray-700 rounded-full' />
+                    <img src="https://res.cloudinary.com/dcfy1v0ab/image/upload/v1738243131/profile_img.png" alt="profileImg" className='h-52 lg:h-80 bg-gray-700 rounded-full' />
                 </div>}
             </div>
         </div>

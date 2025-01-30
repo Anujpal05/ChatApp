@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { LuMessageCircleMore } from "react-icons/lu";
 import { MdAddCall } from "react-icons/md";
 import { BiLogOut } from "react-icons/bi";
 import { axiosInstance } from '../../utils/axios';
 import useAuthStore from '../store/authStore';
 import useChatStore from '../store/chatStore';
-import profileImg from '../assets/image/profile.png'
 import { RotatingLines } from 'react-loader-spinner'
 import useCallStore from '../store/callStore';
 import CallSidebar from './CallSidebar';
@@ -94,7 +93,7 @@ const Sidebar = () => {
                     {users.length > 0 && users.map((user, i) => (
                         <li className={` hover:bg-gray-800 p-2 rounded-md transition-all duration-300 ease-in-out ${selectedUser?._id === user._id ? 'bg-gray-800 ' : ""}`} onClick={() => setSelectedUser(user)} key={i}>
                             <div className=' flex items-center gap-5'>
-                                <div className='  relative h-10 '><img src={profileImg} alt='profile Img' className=' text-black h-full bg-white rounded-full border-2 border-white  ' />
+                                <div className='  relative h-10 '><img src="https://res.cloudinary.com/dcfy1v0ab/image/upload/v1738243131/profile_img.png" alt='profileImg' className=' text-black h-10 w-10 bg-white rounded-full border-2 border-white  ' />
                                     {onlineUsers && onlineUsers.includes(user._id) && <span className=' h-2 w-2 rounded-full bg-green-500 absolute top-0 right-0'></span>}
                                 </div>
                                 <div>

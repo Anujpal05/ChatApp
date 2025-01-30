@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import useCallStore from '../store/callStore'
 import useAuthStore from '../store/authStore';
 import { SlCallIn } from "react-icons/sl";
 import { SlCallOut } from "react-icons/sl";
 import { MdMissedVideoCall } from "react-icons/md";
 import { IoVideocam } from "react-icons/io5";
-import profileImg from '../assets/image/profile.png'
 import getCallTime, { getDate, isToday, isYesterDay } from '../utils/getTime';
 
 
@@ -22,7 +21,7 @@ const CallSidebar = ({ filterCalls }) => {
             <li className={` hover:bg-gray-800 p-2 rounded-md transition-all duration-300 ease-in-out`} key={i}>
               <div className=' flex justify-between items-center gap-4 w-full' onClick={() => setSelectedCall(call)}>
                 <div className=' flex items-center gap-4 px-1 lg:px-3'>
-                  <img src={profileImg} alt="profileImg" className='  h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300 ' />
+                  <img src="https://res.cloudinary.com/dcfy1v0ab/image/upload/v1738243131/profile_img.png" alt="profileImg" className='  h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300 ' />
                   <div className=''>
                     <p className=' font-semibold text-xl text-center'>{call.callerId._id == authUser ? call.receiverId.userName : call.callerId.userName}</p>
                     <p className=' text-gray-400 text-[14px] font-semibold '>{call.callerId._id == authUser ? <span className=' flex items-center gap-2'>{call.kind == "Audio" ? <SlCallOut className=' text-sm' /> : <MdMissedVideoCall className=' text-sm' />}Outgoing</span> : <span className=' flex items-center gap-2'>{call.kind == "Audio" ? <SlCallIn className=' text-sm' /> : <IoVideocam />}Incoming</span>}</p>

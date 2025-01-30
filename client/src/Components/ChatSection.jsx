@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { BsFillSendFill } from "react-icons/bs";
 import '../App.css'
 import useAuthStore from '../store/authStore.js';
 import useChatStore from '../store/chatStore';
 import { RxCross2 } from "react-icons/rx";
-import profileImg from '../assets/image/profile.png'
 import { FaRegImage } from "react-icons/fa6";
 import { BsFillChatRightDotsFill } from "react-icons/bs";
 import { MdOutlineFileDownload } from "react-icons/md";
@@ -14,7 +13,6 @@ import getMessageTime from '../utils/getTime';
 import { IoMdCall } from "react-icons/io";
 import { FaVideo } from "react-icons/fa";
 import CallSection from './CallSection';
-import { useNavigate } from 'react-router-dom';
 
 
 
@@ -221,15 +219,15 @@ const ChatSection = () => {
                 {selectedUser && <div className='w-full flex flex-col h-screen '>
                     <div className=' flex justify-between items-center gap-4 p-2 bg-gray-950 w-full relative'>
                         <div className=' flex gap-4'>
-                            <div><img src={profileImg} className=' h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300' /></div>
+                            <div><img src="https://res.cloudinary.com/dcfy1v0ab/image/upload/v1738243131/profile_img.png" className=' h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300' /></div>
                             <div className=' flex flex-col'>
                                 <span>{selectedUser.userName}</span>
                                 {onlineUsers.includes(selectedUser._id) ? <span className=' text-green-400 text-[12px]'>Online</span> : <span className=' text-gray-300 text-[12px]'>Offline</span>}
                             </div>
                         </div>
                         <div className=' space-x-5 px-3'>
-                            <button className=' text-blue-600 outline-none text-2xl' onClick={() => showCallSection('video')}><a href={`#call:${selectedUser._id}`}> <FaVideo /></a></button>
-                            <button className=' text-blue-600 outline-none text-2xl' onClick={() => showCallSection('audio')}> <a href={`#call:${selectedUser._id}`}><IoMdCall /></a ></button>
+                            <button className=' text-blue-600 outline-none text-2xl' onClick={() => showCallSection('video')}><FaVideo /></button>
+                            <button className=' text-blue-600 outline-none text-2xl' onClick={() => showCallSection('audio')}> <IoMdCall /></button>
                             <button className=' text-2xl outline-none text-red-700 hover:text-[27px] hover:text-red-900' onClick={() => setSelectedUser(null)}><><RxCross2 /></></button>
                         </div>
                     </div>

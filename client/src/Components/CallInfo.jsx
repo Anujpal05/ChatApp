@@ -4,7 +4,6 @@ import { LuMessageCircleMore } from "react-icons/lu";
 import useCallStore from '../store/callStore';
 import { FaVideo } from "react-icons/fa";
 import { IoMdCall } from "react-icons/io";
-import profileImg from '../assets/image/profile.png'
 import getCallTime, { getDate, isToday, isYesterDay } from '../utils/getTime';
 import useAuthStore from '../store/authStore';
 import useChatStore from '../store/chatStore';
@@ -29,7 +28,7 @@ const CallInfo = () => {
                 </div>
                 <div className=' p-3 border-b-2 border-gray-700 flex justify-between'>
                     <div className='  flex items-center gap-4'>
-                        <img src={profileImg} alt="profileImg" className=' h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300' />
+                        <img src="https://res.cloudinary.com/dcfy1v0ab/image/upload/v1738243131/profile_img.png" alt="profileImg" className=' h-10 w-10 rounded-full bg-blue-500 border-2 border-white text-gray-300' />
                         <p className=' font-semibold text-lg text-center'>{selectedCall.callerId._id == authUser ? selectedCall.receiverId.userName : selectedCall.callerId.userName}</p>
                     </div>
                     <button className=' text-2xl px-2 outline-none ' onClick={showSelectedUser}><LuMessageCircleMore /></button>

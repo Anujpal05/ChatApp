@@ -57,7 +57,12 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                 }
 
             } catch (error) {
-                console.log(error)
+                socket?.emit("calling", { accept: false, recieverId: selectedUser?._id });
+                setshowCall(false);
+                toast.dismiss();
+                toast.error("Please give required permissions!")
+                console.log(error);
+
             }
         }
 
@@ -99,6 +104,8 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                 })
             } catch (error) {
                 console.log(error)
+                socket?.emit("calling", { accept: false, recieverId: selectedUser?._id });
+                setshowCall(false);
             }
 
 
@@ -119,12 +126,13 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
                     await getAllCall(authUser);
                 } catch (error) {
                     console.log(error)
+                    socket?.emit("calling", { accept: false, recieverId: selectedUser?._id });
+                    setshowCall(false);
                 }
 
             })
 
             socket.on("ice-candidate", async ({ candidate }) => {
-                console.log({ candidate })
                 await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
             })
 
@@ -136,10 +144,12 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
         }
     }, [socket])
 
+
     const disconnectCall = () => {
         localVideoRef.current.srcObject?.getTracks().forEach(track => track.stop());
         remoteVideoRef.current.srcObject?.getTracks().forEach(track => track.stop());
         setshowCall(false);
+        toast.dismiss();
         toast.success("Call disconnected!");
     }
 

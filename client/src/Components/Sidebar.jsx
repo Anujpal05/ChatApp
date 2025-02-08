@@ -75,7 +75,7 @@ const Sidebar = () => {
     }
 
     return (
-        <div className=' w-full flex flex-col bg-gray-950 border-r-[1px] border-gray-600 pr-1 max-h-screen'>
+        <div className=' w-full flex flex-col bg-gray-950 border-r-[1px] border-gray-600 pr-1 h-screen max-h-screen'>
             <div className=' max-h-[20vh] px-3 py-2'>
                 <div className=' flex justify-between'>
                     <h1 className=' text-2xl font-semibold'>Chats</h1>
@@ -88,7 +88,7 @@ const Sidebar = () => {
                 </div>
                 <div className={`py-2 ${selectedCall ? "hidden lg:block " : "block"}`}><input ref={searchRef} onChange={handleInput} type="text" name="search" id="search" placeholder='Search' autoComplete='off' className=' p-1 w-full px-3 bg-gray-900 border-b-[1px] border-gray-400 rounded-md outline-none appearance-none' /></div>
             </div>
-            {showBox == 'messageBox' && users && !loader && <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow pb-2 show-sidebar '>
+            {showBox == 'messageBox' && users && !loader && <div className=' overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 no-scrollbar-arrows flex-grow pb-2 show-sidebar'>
                 <ul className=' space-y-1'>
                     {users.length > 0 && users.map((user, i) => (
                         <li className={` hover:bg-gray-800 p-2 rounded-md transition-all duration-300 ease-in-out ${selectedUser?._id === user._id ? 'bg-gray-800 ' : ""}`} onClick={() => setSelectedUser(user)} key={i}>

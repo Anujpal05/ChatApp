@@ -44,7 +44,8 @@ const ChatSection = () => {
         if (!socket) return;
 
         if (socket) {
-            console.log(socket?.id)
+            console.log("socketId" + socket?.id)
+            console.log("selectedUser" + selectedUser?._id)
             socket.on("newMessage", (newMessage) => {
                 const isMessageSentFromSelectedUser =
                     newMessage.senderId === selectedUser._id;
@@ -191,9 +192,12 @@ const ChatSection = () => {
         link.click();
     }
 
+
     const showCallSection = (type) => {
+        console.log(selectedUser._id)
         if (!onlineUsers.includes(selectedUser?._id)) {
             socket.emit('calling', { accept: false, recieverId: selectedUser?._id });
+            toast.dismiss();
             toast.error("User is Offline!");
             return;
         }
@@ -210,6 +214,12 @@ const ChatSection = () => {
             })
         }
     }, [messages])
+
+    useEffect(() => {
+        console.log("UserId" + authUser)
+        console.log("onlineUsers :" + onlineUsers)
+    }, [])
+
 
 
 

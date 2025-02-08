@@ -15,11 +15,13 @@ const useAuthStore = create(
       login: async (userData) => {
         try {
           const { data } = await axiosInstance.post("/user/register", userData);
+          toast.dismiss();
           toast.success(data.message);
           set({ isLogin: true, authUser: data.userId });
           get().connectSocket();
         } catch (error) {
           console.log(error);
+          toast.dismiss();
           toast.error(error?.response?.data?.message || "Something is wrong!");
         }
       },
@@ -31,9 +33,13 @@ const useAuthStore = create(
           const { data } = await axiosInstance.post("/user/logout");
           useChatStore.getState().setSelectedUser(null);
           get().disconnectSocket();
+          toast.dismiss();
           toast.success(data.message);
+          return true;
         } catch (error) {
+          toast.dismiss();
           toast.error(error?.response?.data?.message || "Something is wrong!");
+          return false;
         }
       },
 

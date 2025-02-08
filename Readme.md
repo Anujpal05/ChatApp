@@ -23,26 +23,32 @@ QuickTalk is a real-time chat application built with the MERN stack (MongoDB, Ex
 ## Installation
 
 1. Clone the repository:
+
    ```bash
-   git clone https://github.com/your-username/quicktalk.git
+   git clone https://github.com/Anujpal05/ChatApp
    ```
+
 2. Navigate to the project directory:
+
    ```base
    cd ChatApp
    ```
+
    3.Install the dependencies for the backend:
 
-```base
-cd server
-npm Install
-```
+   ```base
+   cd server
+   npm Install
+   ```
 
-4. Install the dependencies for the frontend:
+3. Install the dependencies for the frontend:
+
    ```base
    cd client
    npm Install
    ```
-   5.Set up environment variables:
+
+4. Set up environment variables:
 
 - Create a .env file in the server folder with the following variables
   ```base
@@ -55,24 +61,23 @@ npm Install
   CLIENT_URL = YOUR_CLIENT_URL
   ```
 - Create a .env file in the client folder with the following variables
-
   ```base
   VITE_SERVER_URL = YOUR_SERVER_URL
   ```
 
-  6.Start the backend:
+6. Start the backend:
 
-```base
-cd server
-npm start
-```
+   ```base
+   cd server
+   npm start
+   ```
 
-7.Start the frontend:
+7. Start the frontend:
 
-```base
-cd client
-npm run dev
-```
+   ```base
+   cd client
+   npm run dev
+   ```
 
 ## Usage
 

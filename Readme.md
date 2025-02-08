@@ -34,21 +34,21 @@ QuickTalk is a real-time chat application built with the MERN stack (MongoDB, Ex
    cd ChatApp
    ```
 
-   3.Install the dependencies for the backend:
+3.Install the dependencies for the backend:
 
-   ```base
-   cd server
-   npm Install
-   ```
+    ```base
+    cd server
+    npm Install
+    ```
 
-3. Install the dependencies for the frontend:
+4. Install the dependencies for the frontend:
 
    ```base
    cd client
    npm Install
    ```
 
-4. Set up environment variables:
+5. Set up environment variables:
 
 - Create a .env file in the server folder with the following variables
   ```base

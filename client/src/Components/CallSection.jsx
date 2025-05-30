@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PiPhoneDisconnect } from "react-icons/pi";
 import useAuthStore from '../store/authStore';
 import useChatStore from '../store/chatStore';
 import toast from 'react-hot-toast';
 import useCallStore from '../store/callStore';
+import { MdOutlineCameraswitch } from "react-icons/md";
 
 const CallSection = ({ showCall, setshowCall, callingType }) => {
     const localVideoRef = useRef(null);
@@ -11,6 +12,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
     const { socket, authUser } = useAuthStore();
     const { selectedUser } = useChatStore();
     const { addNewCall, getAllCall } = useCallStore();
+    const [facingMode, setfacingMode] = useState('user')
 
     const configuration = {
         iceServers: [
@@ -24,9 +26,11 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
         const MakeCall = async () => {
             try {
                 const constraints = {
-                    video: callingType == 'video',
+                    video: callingType == 'video' ? { facingMode } : false,
                     audio: true
                 }
+
+                console.log(constraints)
 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 console.log(stream)
@@ -65,8 +69,9 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
 
             }
         }
+        console.log("clkkfk")
 
-        if (showCall) {
+        if (showCall && facingMode) {
             const notification = document.getElementsByClassName('.call-notification')[0];
             notification?.remove();
             MakeCall();
@@ -78,7 +83,7 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
             socket.off("ice-candidate")
             socket.off("calling");
         }
-    }, [showCall])
+    }, [showCall, facingMode])
 
 
     useEffect(() => {
@@ -159,15 +164,25 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
     }
 
 
+    const switchCamera = () => {
+        console.log(facingMode);
+        console.log("hello dear")
+        setfacingMode(facingMode == "environment" ? "user" : "environment")
+
+    }
 
     return (
         <div className=' absolute top-0 left-0 h-screen w-screen  text-white flex justify-center items-center'>
             <div className='  bg-gray-800 lg:h-[80%] lg:w-[80%] h-full w-full flex justify-center items-center relative bg-cover rounded-md' style={{ backgroundImage: "url('https://res.cloudinary.com/dcfy1v0ab/image/upload/v1737040206/brvvhxbkqdta143xtoly.jpg')" }}>
+
                 <div className=' flex justify-center h-[95%] w-[95%]'>
                     <video ref={remoteVideoRef} autoPlay controls={false} playsInline id='peerPlayer' className=' w-full  '  ></video>
                 </div>
                 <div className=' absolute lg:bottom-[-20px] bottom-2 right-1 lg:right-2 text-white px-3 flex justify-end'>
-                    <video ref={localVideoRef} autoPlay id='localPlayer' controls={false} playsInline className=' lg:h-60 lg:w-60 h-36 w-36' ></video>
+                    <div className=' relative'>
+                        <video ref={localVideoRef} autoPlay id='localPlayer' controls={false} playsInline className=' lg:h-60 lg:w-60 h-36 w-36 ' ></video>
+                        <button className=' absolute top-10 text-gray-800 text-2xl right-1 hover:text-[28px] cursor-pointer outline-none' onClick={switchCamera}><MdOutlineCameraswitch /></button>
+                    </div>
                 </div>
 
                 <button className=' text-gray-400 bg-red-600 hover:bg-red-700 transition-all duration-300 ease-in-out px-5 rounded-3xl absolute bottom-5  outline-none text-4xl ' onClick={callDisconnected}>

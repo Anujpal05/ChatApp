@@ -42,8 +42,8 @@ export const registerUser = async (req, res) => {
       const token = generateToken(payload);
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "None",
+        secure: false,
+        sameSite: "Lax",
       });
 
       return res
@@ -67,8 +67,8 @@ export const registerUser = async (req, res) => {
     const token = generateToken(payload);
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
+      secure: false,
+      sameSite: "Lax",
     });
 
     return res.status(200).json({

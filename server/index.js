@@ -7,6 +7,7 @@ import userRouter from "./routes/user.routes.js";
 import cookieParser from "cookie-parser";
 import messageRouter from "./routes/message.route.js";
 import callRouter from "./routes/call.route.js";
+import uptimeRouter from "./controllers/uptime.controller.js";
 dotenv.config();
 const PORT = process.env.PORT || 5001;
 
@@ -26,6 +27,7 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use("/api/user", userRouter);
 app.use("/api/message", messageRouter);
 app.use("/api/call", callRouter);
+app.use("/api/request", uptimeRouter);
 
 app.get("/", (req, res) => {
   res.status(200).send(`<h1>Server is running on port ${PORT}</h1>`);

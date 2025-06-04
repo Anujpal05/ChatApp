@@ -75,7 +75,7 @@ const Sidebar = () => {
     }
 
     return (
-        <div className=' w-full flex flex-col bg-gray-950 border-r-[1px] border-gray-600 pr-1 h-screen max-h-screen'>
+        <div className=' w-full flex flex-col bg-gray-950 border-r-[1px] border-gray-600 pr-1 lg:h-screen lg:max-h-screen'>
             <div className=' max-h-[20vh] px-3 py-2'>
                 <div className=' flex justify-between'>
                     <h1 className=' text-2xl font-semibold'>Chats</h1>

@@ -165,8 +165,6 @@ const CallSection = ({ showCall, setshowCall, callingType }) => {
 
 
     const switchCamera = () => {
-        console.log(facingMode);
-        console.log("hello dear")
         setfacingMode(facingMode == "environment" ? "user" : "environment")
 
     }

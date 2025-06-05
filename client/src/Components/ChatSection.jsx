@@ -248,14 +248,14 @@ const ChatSection = () => {
                                     {selectedUser._id == message.senderId && <>
                                         <div className=' self-start text-[12px] text-gray-500 font-semibold'>{getMessageTime(message.createdAt)}</div>
                                         <div className='self-start w-fit bg-gray-700 max-w-[40%] lg:max-w-[70%] p-1 px-2 rounded-lg '>
-                                            {message.image && <div ><img src={message.image} alt="image" className=' h-40 w-55 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
+                                            {message.image && <div ><img src={message.image} alt="image" className=' h-48 w-64 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
                                             <p onClick={() => getMessageTime(message.createdAt)}>{message.text}</p>
                                         </div>
                                     </>}
                                     {authUser == message.senderId && <>
                                         <div className=' self-end text-[12px] text-gray-500 font-semibold'>{getMessageTime(message.createdAt)}</div>
                                         <div className=' self-end w-fit  bg-green-700 max-w-[40%] lg:max-w-[70%] p-1 px-2 rounded-lg '>
-                                            {message.image && <div><img src={message.image} alt="image" className=' h-40 w-55 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
+                                            {message.image && <div><img src={message.image} alt="image" className=' h-48 w-64 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
                                             <p onClick={() => getMessageTime(message.createdAt)}>{message.text}</p>
                                         </div>
                                     </>}
@@ -299,7 +299,7 @@ const ChatSection = () => {
             {showImg && <div className=' show-image absolute left-0 h-screen w-screen bg-black flex justify-center items-center'>
                 <button className=' absolute top-5 lg:right-10 right-5 text-2xl text-red-500 outline-none' onClick={() => setshowImg(null)}><RxCross2 /></button>
                 <button className=' absolute top-5 lg:right-20 right-16 text-2xl text-blue-500 outline-none' onClick={downloadImg}><MdOutlineFileDownload /></button>
-                <img src={showImg} alt="Image Preview" className=' lg:max-h-[80%]  lg:h-[700px] max-h-[70%] h-[400px] max-w-[90%] bg-blue-500' />
+                <img src={showImg} alt="Image Preview" className='  bg-blue-500' />
             </div>
             }
 

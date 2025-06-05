@@ -248,14 +248,14 @@ const ChatSection = () => {
                                     {selectedUser._id == message.senderId && <>
                                         <div className=' self-start text-[12px] text-gray-500 font-semibold'>{getMessageTime(message.createdAt)}</div>
                                         <div className='self-start w-fit bg-gray-700 max-w-[40%] lg:max-w-[70%] p-1 px-2 rounded-lg '>
-                                            {message.image && <div ><img src={message.image} alt="image" className=' h-40 w-40 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
+                                            {message.image && <div ><img src={message.image} alt="image" className=' h-40 w-55 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
                                             <p onClick={() => getMessageTime(message.createdAt)}>{message.text}</p>
                                         </div>
                                     </>}
                                     {authUser == message.senderId && <>
                                         <div className=' self-end text-[12px] text-gray-500 font-semibold'>{getMessageTime(message.createdAt)}</div>
                                         <div className=' self-end w-fit  bg-green-700 max-w-[40%] lg:max-w-[70%] p-1 px-2 rounded-lg '>
-                                            {message.image && <div><img src={message.image} alt="image" className=' h-40 w-40 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
+                                            {message.image && <div><img src={message.image} alt="image" className=' h-40 w-55 lg:h-64 lg:w-64' onClick={() => showImage(message.image)} /></div>}
                                             <p onClick={() => getMessageTime(message.createdAt)}>{message.text}</p>
                                         </div>
                                     </>}

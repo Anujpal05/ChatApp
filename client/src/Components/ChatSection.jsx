@@ -285,7 +285,7 @@ const ChatSection = () => {
                         <div className=' absolute bottom-10 px-5 w-full flex gap-3'>
                             <input ref={messageRef} type="text" name="message" id="message" autoComplete='off' className=' flex-grow p-2 outline-none appearance-none bg-gray-900 px-2 rounded-md text-[15px]' placeholder='Type a message' onKeyDown={handleKeyPress} onChange={handleInput} />
                             <input type="file" accept='image/*' name="" id="imageFile" ref={inputImg} className='hidden outline-none' onChange={handleImageChange} />
-                            <label className=' text-xl px-1 py-2 hover:text-[22px] hover:text-gray-200 outline-none' htmlFor='imageFile' ><FaRegImage /></label>
+                            <label className=' text-xl px-1 py-2 hover:text-[22px] hover:text-gray-200 outline-none cursor-pointer z-10' htmlFor='imageFile' ><FaRegImage /></label>
                             <button className={`text-2xl text-blue-600 p-2 outline-none rounded-full hover:scale-105 transition-all duration-300 ease-in-out ${isDisable ? 'bg-gray-500' : 'bg-gray-200'}`} onClick={() => messageSend(messageRef?.current?.value?.trim())} disabled={isDisable} ><BsFillSendFill /></button>
                         </div>
                     </div>

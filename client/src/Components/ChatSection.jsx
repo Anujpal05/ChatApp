@@ -241,7 +241,7 @@ const ChatSection = () => {
                             <button className=' text-2xl outline-none text-red-700 hover:text-[27px] hover:text-red-900' onClick={() => setSelectedUser(null)}><><RxCross2 /></></button>
                         </div>
                     </div>
-                    <div className=' msg-container flex-grow overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 mb-[70px] ' style={{ backgroundImage: `url('https://res.cloudinary.com/dcfy1v0ab/image/upload/v1736671906/sigegsbfbfcveg3x4mph.jpg')` }}>
+                    <div className=' msg-container flex-grow overflow-y-auto scrollbar-thin scrollbar-track-gray-950 scrollbar-thumb-gray-900 mb-[84px] ' style={{ backgroundImage: `url('https://res.cloudinary.com/dcfy1v0ab/image/upload/v1736671906/sigegsbfbfcveg3x4mph.jpg')` }}>
                         {selectedUser && messages && <div className=' flex flex-col gap-2 w-full p-2 lg:p-5 msg-container flex-grow h-full' >
                             {messages.length > 0 && messages.map((message, i) => (
                                 <div className='flex flex-col justify-between w-full' key={i}>
@@ -282,10 +282,10 @@ const ChatSection = () => {
                         <span className=' relative lg:bottom-[146px] lg:left-[130px] text-red-500  bottom-[82px] left-[68px] cursor-pointer ' onClick={() => setimagePreview(null)}><RxCross2 /></span>
                     </div>}
                     <div className=' h-[6vh]'>
-                        <div className=' absolute bottom-4 px-5 w-full flex gap-3'>
+                        <div className=' absolute bottom-10 px-5 w-full flex gap-3'>
                             <input ref={messageRef} type="text" name="message" id="message" autoComplete='off' className=' flex-grow p-2 outline-none appearance-none bg-gray-900 px-2 rounded-md text-[15px]' placeholder='Type a message' onKeyDown={handleKeyPress} onChange={handleInput} />
-                            <input type="file" accept='image/*' name="" id="" ref={inputImg} className='hidden outline-none' onChange={handleImageChange} />
-                            <button className=' text-xl px-1 hover:text-[22px] hover:text-gray-200 outline-none' onClick={handleImgInput}><FaRegImage /></button>
+                            <input type="file" accept='image/*' name="" id="imageFile" ref={inputImg} className='hidden outline-none' onChange={handleImageChange} />
+                            <label className=' text-xl px-1 py-2 hover:text-[22px] hover:text-gray-200 outline-none' htmlFor='imageFile' ><FaRegImage /></label>
                             <button className={`text-2xl text-blue-600 p-2 outline-none rounded-full hover:scale-105 transition-all duration-300 ease-in-out ${isDisable ? 'bg-gray-500' : 'bg-gray-200'}`} onClick={() => messageSend(messageRef?.current?.value?.trim())} disabled={isDisable} ><BsFillSendFill /></button>
                         </div>
                     </div>

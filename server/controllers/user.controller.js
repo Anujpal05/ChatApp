@@ -44,6 +44,7 @@ export const registerUser = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: "None",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
       return res
@@ -69,6 +70,7 @@ export const registerUser = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "None",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
     return res.status(200).json({
@@ -85,7 +87,11 @@ export const registerUser = async (req, res) => {
 
 export const logOut = (req, res) => {
   try {
-    res.cookie("token", "", { maxAge: 0 });
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+    });
     return res.status(200).json({ message: "LogOut successfully!" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });

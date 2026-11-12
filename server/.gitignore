@@ -1,2 +1,7 @@
 node_modules/
 .env
+.env.*
+!.env.example
+.open-e2ee/
+coverage/
+logs/

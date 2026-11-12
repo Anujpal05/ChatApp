@@ -1,13 +1,11 @@
 import mongoose from "mongoose";
 
 const db = async () => {
-  try {
-    console.log(process.env.MONGODB_URL);
-    await mongoose.connect(process.env.MONGODB_URL);
-    console.log("Database connected successfully!");
-  } catch (error) {
-    console.log("Database connection error!");
-  }
+  if (!process.env.MONGODB_URL) throw new Error("MONGODB_URL is required");
+  await mongoose.connect(process.env.MONGODB_URL, {
+    serverSelectionTimeoutMS: 10000,
+  });
+  console.log("MongoDB connected.");
 };
 
 export default db;

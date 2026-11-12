@@ -3,66 +3,40 @@ import CallHistory from "../models/call.model.js";
 
 export const addNewCall = async (req, res) => {
   try {
-    const { callerId, receiverId, kind } = req.body;
-    if (!callerId || !receiverId || !kind) {
-      return res.status(400).json({ message: "Provide all required field!" });
-    }
-
-    const newCall = new CallHistory({
-      callerId,
-      receiverId,
-      kind,
+    const { callerId = req.user.userId, receiverId, kind, status = "accepted", durationSeconds = 0 } = req.body || {};
+    if (!mongoose.isValidObjectId(callerId) || !mongoose.isValidObjectId(receiverId) || !["Audio", "Video"].includes(kind)) return res.status(400).json({ message: "Invalid call details." });
+    if (![String(callerId), String(receiverId)].includes(String(req.user.userId))) return res.status(403).json({ message: "You are not a participant in this call." });
+    const call = await CallHistory.create({
+      callerId, receiverId, kind,
+      status: ["accepted", "rejected", "missed", "ended", "failed"].includes(status) ? status : "accepted",
+      startedAt: status === "accepted" ? new Date() : undefined,
+      endedAt: ["rejected", "missed", "ended", "failed"].includes(status) ? new Date() : undefined,
+      durationSeconds: Math.max(0, Math.min(Number(durationSeconds) || 0, 86400)),
     });
-
-    newCall.save();
-    return res.status(200).json({ message: "New Call added successfully!" });
+    res.status(201).json({ call });
   } catch (error) {
-    return res.status(500).json({ message: "Internal server error!" });
+    res.status(500).json({ message: "Unable to save call history." });
   }
 };
 
 export const getIndividualCall = async (req, res) => {
   try {
-    const { call_id } = req.params;
-    console.log(call_id);
-    if (!call_id) {
-      return res.status(400).json({ message: "Please provide call_id!" });
-    }
-
-    const callDetails = await CallHistory.findById(call_id);
-
-    if (!callDetails) {
-      return res.status(404).json({ message: "Call details not found!" });
-    }
-
-    return res
-      .status(200)
-      .json({ message: "Call details found!", callDetails });
-  } catch (error) {
-    return res.status(500).json({ message: "Internal server error!" });
+    if (!mongoose.isValidObjectId(req.params.call_id)) return res.status(400).json({ message: "Invalid call identifier." });
+    const call = await CallHistory.findOne({ _id: req.params.call_id, $or: [{ callerId: req.user.userId }, { receiverId: req.user.userId }] }).populate("callerId", "userName avatar").populate("receiverId", "userName avatar");
+    if (!call) return res.status(404).json({ message: "Call not found." });
+    res.json({ callDetails: call });
+  } catch {
+    res.status(500).json({ message: "Unable to load call details." });
   }
 };
 
 export const getAllCallDetails = async (req, res) => {
   try {
-    const { userid } = req.params;
-
-    if (!userid) {
-      return res.status(400).json({ message: "Please Provide userId!" });
-    }
-
-    const callingHistory = await CallHistory.find({
-      $or: [{ callerId: userid }, { receiverId: userid }],
-    })
-      .populate("receiverId")
-      .populate("callerId")
-      .sort({ createdAt: -1 });
-
-    return res
-      .status(200)
-      .json({ message: "Retrieving call history!", callingHistory });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Internal server error!", error });
+    const calls = await CallHistory.find({ $or: [{ callerId: req.user.userId }, { receiverId: req.user.userId }] })
+      .populate("callerId", "userName avatar").populate("receiverId", "userName avatar")
+      .sort({ createdAt: -1 }).limit(100);
+    res.json({ callingHistory: calls });
+  } catch {
+    res.status(500).json({ message: "Unable to load call history." });
   }
 };

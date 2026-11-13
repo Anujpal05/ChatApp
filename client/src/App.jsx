@@ -1,29 +1,25 @@
-import './App.css'
-import Home from './Pages/Home'
-import Chat from './Pages/Chat'
-import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
-import useAuthStore from './store/authStore';
-import { Toaster } from 'react-hot-toast';
-
-
+import { useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import Home from "./Pages/Home";
+import Chat from "./Pages/Chat";
+import useAuthStore from "./store/authStore";
 
 function App() {
-  const { isLogin } = useAuthStore();
+  const { authUser, isAuthenticated, isCheckingAuth, checkAuth } = useAuthStore();
+  useEffect(() => { checkAuth(); }, [checkAuth]);
+
+  if (isCheckingAuth) return <div className="app-loader"><div className="loader-orbit" /><span>Preparing your private space…</span></div>;
 
   return (
-    <>
-      <div>
-        <Toaster />
-        <BrowserRouter>
-          <Routes>
-            {!isLogin && <Route path='/' element={<Home />} />}
-            {isLogin && <Route path='/chat-section' element={<Chat />} />}
-            <Route path='*' element={!isLogin ? <Navigate to={'/'} /> : <Navigate to={'/chat-section'} />} />
-          </Routes>
-        </BrowserRouter>
-      </div>
-    </>
-  )
+    <BrowserRouter>
+      <Toaster position="top-right" toastOptions={{ style: { background: "#171a23", color: "#f5f7fb", border: "1px solid #2a3040" } }} />
+      <Routes>
+        <Route path="/" element={isAuthenticated ? <Navigate to="/app" replace /> : <Home />} />
+        <Route path="/app/*" element={isAuthenticated && authUser ? <Chat /> : <Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/app" : "/"} replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
-
-export default App
+export default App;

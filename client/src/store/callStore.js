@@ -1,32 +1,15 @@
 import { create } from "zustand";
 import { axiosInstance } from "../../utils/axios";
 
-const useCallStore = create((set, get) => ({
+const useCallStore = create((set) => ({
   callHistory: [],
   selectedCall: null,
-  addNewCall: async (payload) => {
-    try {
-      await axiosInstance.post("/call/add-new-call", payload);
-    } catch (error) {
-      console.log(error);
-    }
+  async addNewCall(payload) { const { data } = await axiosInstance.post("/call/add-new-call", payload); return data.call; },
+  setSelectedCall(selectedCall) { set({ selectedCall }); },
+  async getAllCall(userId) {
+    const { data } = await axiosInstance.get(`/call/get-all-call/${userId}`);
+    set({ callHistory: data.callingHistory || [] });
   },
-  setSelectedCall: (callInfo) => {
-    set({ selectedCall: callInfo });
-  },
-  getAllCall: async (userId) => {
-    try {
-      const {
-        data: { callingHistory },
-      } = await axiosInstance.get(`/call/get-all-call/${userId}`);
-      set({ callHistory: callingHistory });
-    } catch (error) {
-      console.log(error);
-    }
-  },
-  clearCallHistory: () => {
-    set({ callHistory: [] });
-  },
+  clearCallHistory() { set({ callHistory: [] }); },
 }));
-
 export default useCallStore;

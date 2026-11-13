@@ -13,8 +13,14 @@ import aiRouter from "./routes/ai.route.js";
 import e2eeRouter from "./routes/e2ee.route.js";
 
 const PORT = Number(process.env.PORT || 5001);
-if (!process.env.SECRET_KEY || !process.env.CLIENT_URL || !process.env.MONGODB_URL) {
-  throw new Error("Missing required environment configuration: SECRET_KEY, CLIENT_URL, MONGODB_URL.");
+if (
+  !process.env.SECRET_KEY ||
+  !process.env.CLIENT_URL ||
+  !process.env.MONGODB_URL
+) {
+  throw new Error(
+    "Missing required environment configuration: SECRET_KEY, CLIENT_URL, MONGODB_URL.",
+  );
 }
 
 app.disable("x-powered-by");
@@ -22,7 +28,10 @@ app.use((req, res, next) => {
   res.set("X-Content-Type-Options", "nosniff");
   res.set("Referrer-Policy", "strict-origin-when-cross-origin");
   res.set("X-Frame-Options", "DENY");
-  res.set("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self)");
+  res.set(
+    "Permissions-Policy",
+    "camera=(self), microphone=(self), display-capture=(self)",
+  );
   next();
 });
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
@@ -38,7 +47,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/api/health", (_req, res) => res.json({ status: "ok", service: "quicktalk-api", timestamp: new Date().toISOString() }));
+app.get("/api/health", (_req, res) =>
+  res.json({
+    status: "ok",
+    service: "quicktalk-api",
+    timestamp: new Date().toISOString(),
+  }),
+);
 app.use("/api/user", userRouter);
 app.use("/api/message", messageRouter);
 app.use("/api/call", callRouter);

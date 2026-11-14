@@ -17,15 +17,9 @@ export async function getSignalClient() {
     if (!relayUrl) throw new Error("Signal Relay is not configured. Set VITE_OPEN_E2EE_SIGNAL_RELAY_URL.");
 
     const sdk = await import("@open-e2ee/signal-protocol-sdk");
-    let storage;
-    try {
-      const store = await import("@open-e2ee/signal-protocol-sdk/local/store/web-sqlite");
-      storage = await store.webSqliteStore();
-    } catch (error) {
-      if (error?.code !== "OPFS_UNAVAILABLE") throw error;
-      const fallback = await import("@open-e2ee/signal-protocol-sdk/local/store/web");
-      storage = await fallback.indexedDbStore();
-    }
+    const store = await import("@open-e2ee/signal-protocol-sdk/local/store/web");
+
+    const storage = await store.indexedDbStore();
 
     const getIdentityAssertion = async (request) => {
       const { data } = await axiosInstance.post("/e2ee/identity-assertion", request, { headers: { "Cache-Control": "no-store" } });

@@ -147,6 +147,224 @@ export const saveEncryptedHistory = async (req, res) => {
   }
 };
 
+// Update the authenticated user's independently encrypted archive copy.
+export const updateEncryptedHistory = async (req, res) => {
+  try {
+    const ownerId = String(req.user.userId);
+    const peerId = String(req.params.peerId);
+    const { clientMessageId, ciphertext } = req.body || {};
+
+    if (
+      !mongoose.isValidObjectId(peerId) ||
+      ownerId === peerId ||
+      typeof clientMessageId !== "string" ||
+      !clientMessageId ||
+      clientMessageId.length > 120 ||
+      typeof ciphertext !== "string" ||
+      !ciphertext ||
+      ciphertext.length > 1500000
+    ) {
+      return res.status(400).json({
+        message: "Invalid encrypted message update.",
+      });
+    }
+
+    if (!(await canChat(ownerId, peerId))) {
+      return res.status(403).json({
+        message: "This conversation is unavailable.",
+      });
+    }
+
+    const record = await Messages.findOneAndUpdate(
+      {
+        historyOwnerId: ownerId,
+        conversationId: conversationKey(ownerId, peerId),
+        clientMessageId,
+        messageType: "text",
+        deletedAt: null,
+        $or: [
+          { senderId: ownerId, receiverId: peerId },
+          { senderId: peerId, receiverId: ownerId },
+        ],
+      },
+      {
+        $set: {
+          ciphertext,
+          editedAt: new Date(),
+        },
+      },
+      {
+        new: true,
+      },
+    ).select("clientMessageId editedAt");
+
+    if (!record) {
+      return res.status(404).json({
+        message: "Message not found or no longer editable.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: {
+        clientMessageId: record.clientMessageId,
+        editedAt: record.editedAt,
+      },
+    });
+  } catch (error) {
+    console.error("updateEncryptedHistory:", error.message);
+
+    return res.status(500).json({
+      message: "Unable to update encrypted message history.",
+    });
+  }
+};
+
+// Delete a message only from the authenticated user's archive.
+export const deleteEncryptedHistoryForMe = async (req, res) => {
+  try {
+    const ownerId = String(req.user.userId);
+    const peerId = String(req.params.peerId);
+    const { clientMessageId } = req.body || {};
+
+    if (
+      !mongoose.isValidObjectId(peerId) ||
+      ownerId === peerId ||
+      typeof clientMessageId !== "string" ||
+      !clientMessageId ||
+      clientMessageId.length > 120
+    ) {
+      return res.status(400).json({
+        message: "Invalid delete request.",
+      });
+    }
+
+    if (!(await canChat(ownerId, peerId))) {
+      return res.status(403).json({
+        message: "This conversation is unavailable.",
+      });
+    }
+
+    const record = await Messages.findOneAndUpdate(
+      {
+        historyOwnerId: ownerId,
+        conversationId: conversationKey(ownerId, peerId),
+        clientMessageId,
+        hiddenAt: null,
+        deletedAt: null,
+        $or: [
+          { senderId: ownerId, receiverId: peerId },
+          { senderId: peerId, receiverId: ownerId },
+        ],
+      },
+      {
+        $set: { hiddenAt: new Date() },
+      },
+      { new: true },
+    ).select("clientMessageId hiddenAt");
+
+    if (!record) {
+      return res.status(404).json({
+        message: "Message not found or already deleted.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      scope: "me",
+      clientMessageId: record.clientMessageId,
+      hiddenAt: record.hiddenAt,
+    });
+  } catch (error) {
+    console.error("deleteEncryptedHistoryForMe:", error.message);
+
+    return res.status(500).json({
+      message: "Unable to delete message.",
+    });
+  }
+};
+
+// Delete a message from both participants' archives.
+export const deleteEncryptedHistoryForEveryone = async (req, res) => {
+  try {
+    const ownerId = String(req.user.userId);
+    const peerId = String(req.params.peerId);
+    const { clientMessageId } = req.body || {};
+
+    if (
+      !mongoose.isValidObjectId(peerId) ||
+      ownerId === peerId ||
+      typeof clientMessageId !== "string" ||
+      !clientMessageId ||
+      clientMessageId.length > 120
+    ) {
+      return res.status(400).json({
+        message: "Invalid delete request.",
+      });
+    }
+
+    if (!(await canChat(ownerId, peerId))) {
+      return res.status(403).json({
+        message: "This conversation is unavailable.",
+      });
+    }
+
+    const conversationId = conversationKey(ownerId, peerId);
+
+    // Only the original sender can delete a message for everyone.
+    const originalMessage = await Messages.findOne({
+      historyOwnerId: ownerId,
+      conversationId,
+      clientMessageId,
+      senderId: ownerId,
+      receiverId: peerId,
+      deletedAt: null,
+    }).select("clientMessageId");
+
+    if (!originalMessage) {
+      return res.status(404).json({
+        message: "Message not found or you cannot delete it for everyone.",
+      });
+    }
+
+    const deletedAt = new Date();
+
+    // Mark both independently encrypted copies as deleted.
+    await Messages.updateMany(
+      {
+        conversationId,
+        clientMessageId,
+        deletedAt: null,
+        $or: [{ historyOwnerId: ownerId }, { historyOwnerId: peerId }],
+      },
+      {
+        $set: { deletedAt },
+      },
+    );
+
+    // Notify the other participant. No plaintext is sent.
+    emitToUser(peerId, "message:deleted", {
+      peerId: ownerId,
+      clientMessageId,
+      scope: "everyone",
+      deletedAt,
+    });
+
+    return res.json({
+      success: true,
+      scope: "everyone",
+      clientMessageId,
+      deletedAt,
+    });
+  } catch (error) {
+    console.error("deleteEncryptedHistoryForEveryone:", error.message);
+
+    return res.status(500).json({
+      message: "Unable to delete message for everyone.",
+    });
+  }
+};
+
 // Retrieve encrypted history belonging to the authenticated user.
 export const getEncryptedHistory = async (req, res) => {
   try {
@@ -167,7 +385,7 @@ export const getEncryptedHistory = async (req, res) => {
     const filter = {
       historyOwnerId: ownerId,
       conversationId: conversationKey(ownerId, peerId),
-      deletedAt: null,
+      hiddenAt: null,
     };
 
     if (req.query.before && !Number.isNaN(Date.parse(req.query.before))) {

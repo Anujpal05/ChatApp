@@ -2025,3 +2025,147 @@ select:focus-visible {
 .read-check.failed {
   color: #e5484d;
 }
+
+
+.message-content {
+  position: relative;
+}
+
+/* Menu positioning */
+.message-menu-container {
+  position: absolute;
+  top: -20px;
+  right: -10px;
+  z-index: 50;
+}
+
+/* Three-dot button */
+.message-menu-trigger {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface, rgb(53, 53, 53) );
+  color: var(--text, #212020);
+  font-size: 23px;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Show on hover */
+.message-row:hover .message-menu-trigger,
+.message-menu-trigger:focus-visible,
+.message-menu-container:focus-within .message-menu-trigger {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Dropdown */
+.message-dropdown {
+  position: absolute;
+  top: 34px;
+  right: 0;
+  min-width: 190px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--surface, #404040);
+  color: var(--text, #333);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 60;
+}
+
+.message-dropdown button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.message-dropdown button:hover {
+  background: rgba(128, 128, 128, 0.12);
+}
+
+.message-dropdown button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.message-dropdown .delete-everyone-option {
+  color: #dc2626;
+}
+
+/* Touchscreens don't support hover */
+@media (hover: none) {
+  .message-menu-trigger {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Message options dropdown: dark, readable text */
+.message-dropdown {
+  background: #303030;
+  color: #ededed;
+  border: 1px solid #d1d5db;
+}
+
+.message-dropdown button {
+  background: transparent;
+  color: #feffff !important;
+  font-weight: 500;
+}
+
+.message-dropdown button span {
+  color: #e8e8e8;
+}
+.message-edit-area{
+   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.message-edit-area textarea{
+  background: rgb(73, 73, 73);
+  color: white;
+  padding: 5px;
+  outline: none;
+  border-radius: 10px;
+}
+
+.save-edit{
+  display: flex;
+  justify-content:space-between;
+  gap: 20px;
+}
+
+.message-dropdown button:hover {
+  background: #616161;
+  color: #e1e1ff !important;
+}
+
+.message-dropdown .delete-everyone-option,
+.message-dropdown .delete-everyone-option span {
+  color: #dc2626 !important;
+}
+
+.message-dropdown button:disabled {
+  color: #9ca3af !important;
+}

@@ -128,38 +128,88 @@ export async function saveMessageHistory({
   });
 }
 
+export async function updateMessageHistory({
+  userId,
+  peerId,
+  clientMessageId,
+  payload,
+}) {
+  const ciphertext = await encryptHistoryPayload(userId, payload);
+
+  const { data } = await axiosInstance.patch(`/message/history/${peerId}`, {
+    clientMessageId,
+    ciphertext,
+  });
+
+  return data;
+}
+
+export async function deleteMessageForMe({ peerId, clientMessageId }) {
+  const { data } = await axiosInstance.patch(
+    `/message/history/${peerId}/delete-for-me`,
+    { clientMessageId },
+  );
+
+  return data;
+}
+
+export async function deleteMessageForEveryone({ peerId, clientMessageId }) {
+  const { data } = await axiosInstance.patch(
+    `/message/history/${peerId}/delete-for-everyone`,
+    { clientMessageId },
+  );
+
+  return data;
+}
+
 // Fetch and decrypt history.
+
 export async function loadMessageHistory({ userId, peerId }) {
   const { data } = await axiosInstance.get(`/message/history/${peerId}`);
 
   const decrypted = [];
 
   for (const row of data.messages || []) {
+    // A globally deleted message must not be decrypted or displayed
+    // with its original content.
+    if (row.deletedAt) {
+      decrypted.push({
+        clientMessageId: row.clientMessageId,
+        senderId: String(row.senderId),
+        receiverId: String(row.receiverId),
+        createdAt: row.createdAt,
+        deletedAt: row.deletedAt,
+        type: "deleted",
+        content: "",
+        status: "deleted",
+        protocol: "signal",
+      });
+
+      continue;
+    }
+
     try {
       let payload = await decryptHistoryPayload(userId, row.ciphertext);
 
-      // Recover attachment messages that were previously archived as text.
       if (payload.type === "text" && typeof payload.content === "string") {
         try {
           const parsed = JSON.parse(payload.content);
 
           if (parsed.type === "attachment" && parsed.attachment?.url) {
             payload = parsed;
-            console.log(
-              "[Archive] Recovered previously misclassified attachment:",
-              parsed.attachment.fileName,
-            );
           }
         } catch {
-          // This is an ordinary text message.
+          // Keep the original text payload.
         }
       }
+
       decrypted.push({
         ...payload,
         clientMessageId: row.clientMessageId,
         senderId: String(row.senderId),
         receiverId: String(row.receiverId),
         createdAt: row.createdAt,
+        editedAt: row.editedAt || null,
         protocol: "signal",
         status: row.readAt ? "read" : row.deliveredAt ? "delivered" : "sent",
       });

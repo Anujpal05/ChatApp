@@ -13,6 +13,9 @@ import CallExperience from "../Components/CallExperience";
 import {
   saveMessageHistory,
   loadMessageHistory,
+  updateMessageHistory,
+  deleteMessageForMe,
+  deleteMessageForEveryone,
   encryptAndUploadAttachment,
   downloadAndDecryptAttachment,
 } from "../services/messageArchive";
@@ -617,6 +620,11 @@ function Conversation({ signalStatus }) {
     updateMessageStatus,
   } = useChatStore();
   const [draft, setDraft] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState(null);
+  const [openMessageMenuId, setOpenMessageMenuId] = useState(null);
   const [typing, setTyping] = useState(false);
   const [sending, setSending] = useState(false);
   const [call, setCall] = useState(null);
@@ -851,6 +859,187 @@ function Conversation({ signalStatus }) {
     }
   }
 
+  async function saveEdit(message) {
+    const updatedContent = editDraft.trim();
+
+    if (!message || !updatedContent || !selectedUser || savingEdit) {
+      return;
+    }
+
+    // Only the original sender can edit their text message.
+    if (String(message.senderId) !== String(authUser._id)) {
+      toast.error("You can only edit your own messages.");
+      return;
+    }
+
+    if (message.attachment || message.type === "deleted") {
+      toast.error("This message cannot be edited.");
+      return;
+    }
+
+    setSavingEdit(true);
+
+    const editedAt = new Date();
+
+    const payload = {
+      type: "message:edit",
+      clientMessageId: message.clientMessageId,
+      content: updatedContent,
+      editedAt: editedAt.toISOString(),
+    };
+
+    try {
+      // Send the edit through Signal Protocol.
+      await sendSignalMessage(
+        selectedUser.signalUserId,
+        JSON.stringify(payload),
+      );
+
+      // Update the sender's own message immediately.
+      const currentMessages = useChatStore.getState().messages;
+
+      setMessages(
+        currentMessages.map((item) =>
+          item.clientMessageId === message.clientMessageId
+            ? {
+                ...item,
+                content: updatedContent,
+                editedAt,
+              }
+            : item,
+        ),
+      );
+
+      // Update the sender's independently encrypted archive copy.
+      await updateMessageHistory({
+        userId: authUser._id,
+        peerId: selectedUser._id,
+        clientMessageId: message.clientMessageId,
+        payload: {
+          type: "text",
+          content: updatedContent,
+          createdAt: new Date(message.createdAt).toISOString(),
+        },
+      });
+
+      setEditingMessageId(null);
+      setEditDraft("");
+
+      toast.success("Message edited.");
+    } catch (error) {
+      console.error("[Edit] Message update failed:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to edit message.",
+      );
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function deleteForMe(message) {
+    if (!message?.clientMessageId || !selectedUser || deletingMessageId) {
+      return;
+    }
+
+    setDeletingMessageId(message.clientMessageId);
+
+    try {
+      await deleteMessageForMe({
+        peerId: selectedUser._id,
+        clientMessageId: message.clientMessageId,
+      });
+
+      const currentMessages = useChatStore.getState().messages;
+
+      setMessages(
+        currentMessages.filter(
+          (item) => item.clientMessageId !== message.clientMessageId,
+        ),
+      );
+
+      toast.success("Message deleted for you.");
+    } catch (error) {
+      console.error("[Delete] Delete for me failed:", error);
+      toast.error(
+        error?.response?.data?.message || "Unable to delete this message.",
+      );
+    } finally {
+      setDeletingMessageId(null);
+    }
+  }
+
+  async function deleteForEveryone(message) {
+    if (!message?.clientMessageId || !selectedUser || deletingMessageId) {
+      return;
+    }
+
+    if (String(message.senderId) !== String(authUser._id)) {
+      toast.error("You can only delete your own messages for everyone.");
+      return;
+    }
+
+    setDeletingMessageId(message.clientMessageId);
+
+    const deletedAt = new Date();
+
+    try {
+      // Update both participants' encrypted archive records.
+      await deleteMessageForEveryone({
+        peerId: selectedUser._id,
+        clientMessageId: message.clientMessageId,
+      });
+
+      // Notify the recipient through Signal Protocol.
+      const payload = {
+        type: "message:delete",
+        scope: "everyone",
+        clientMessageId: message.clientMessageId,
+        deletedAt: deletedAt.toISOString(),
+      };
+
+      await sendSignalMessage(
+        selectedUser.signalUserId,
+        JSON.stringify(payload),
+      );
+
+      // Replace the message locally with a tombstone.
+      const currentMessages = useChatStore.getState().messages;
+
+      setMessages(
+        currentMessages.map((item) =>
+          item.clientMessageId === message.clientMessageId
+            ? {
+                ...item,
+                content: "",
+                text: "",
+                attachment: null,
+                type: "deleted",
+                status: "deleted",
+                deletedAt,
+                editedAt: null,
+              }
+            : item,
+        ),
+      );
+
+      setEditingMessageId(null);
+      setEditDraft("");
+
+      toast.success("Message deleted for everyone.");
+    } catch (error) {
+      console.error("[Delete] Delete for everyone failed:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to delete message for everyone.",
+      );
+    } finally {
+      setDeletingMessageId(null);
+    }
+  }
+
   async function sendAttachment(file) {
     if (!file || !selectedUser || uploadingFile) return;
 
@@ -984,6 +1173,113 @@ function Conversation({ signalStatus }) {
           type: "text",
           content: envelope.content,
         };
+      }
+
+      // Handle a message deletion received through Signal Protocol.
+      if (payload.type === "message:delete") {
+        if (payload.scope !== "everyone" || !payload.clientMessageId) {
+          return;
+        }
+
+        const deletedAt = payload.deletedAt
+          ? new Date(payload.deletedAt)
+          : new Date();
+
+        const currentMessages = useChatStore.getState().messages;
+
+        const messageExists = currentMessages.some(
+          (message) =>
+            message.clientMessageId === payload.clientMessageId &&
+            String(message.senderId) === String(selectedUser._id),
+        );
+
+        if (!messageExists) {
+          console.warn(
+            "[Delete] Original message is not in the current conversation:",
+            payload.clientMessageId,
+          );
+          return;
+        }
+
+        setMessages(
+          currentMessages.map((message) =>
+            message.clientMessageId === payload.clientMessageId
+              ? {
+                  ...message,
+                  content: "",
+                  text: "",
+                  attachment: null,
+                  type: "deleted",
+                  status: "deleted",
+                  deletedAt,
+                  editedAt: null,
+                }
+              : message,
+          ),
+        );
+
+        console.log(
+          "[Delete] Message deleted for everyone:",
+          payload.clientMessageId,
+        );
+
+        return;
+      }
+
+      // Handle an edit control message separately from a normal message.
+      if (payload.type === "message:edit") {
+        if (!payload.clientMessageId || typeof payload.content !== "string") {
+          return;
+        }
+
+        const currentMessages = useChatStore.getState().messages;
+
+        const originalMessage = currentMessages.find(
+          (message) => message.clientMessageId === payload.clientMessageId,
+        );
+
+        // Ignore edits for messages that are not present in this conversation.
+        if (!originalMessage || originalMessage.type === "deleted") {
+          return;
+        }
+
+        const editedAt = payload.editedAt
+          ? new Date(payload.editedAt)
+          : new Date();
+
+        // Update the message displayed in this device's chat.
+        setMessages(
+          currentMessages.map((message) =>
+            message.clientMessageId === payload.clientMessageId
+              ? {
+                  ...message,
+                  content: payload.content,
+                  editedAt,
+                }
+              : message,
+          ),
+        );
+
+        // Re-encrypt and update this user's own archive copy.
+        try {
+          await updateMessageHistory({
+            userId: authUser._id,
+            peerId: selectedUser._id,
+            clientMessageId: payload.clientMessageId,
+            payload: {
+              type: "text",
+              content: payload.content,
+              createdAt: new Date(originalMessage.createdAt).toISOString(),
+            },
+          });
+
+          console.log("[Edit] Incoming edit saved in encrypted history.");
+        } catch (error) {
+          console.error("[Edit] Failed to update encrypted history:", error);
+          toast.error("Message updated, but history synchronization failed.");
+        }
+
+        return;
       }
 
       const isAttachment =
@@ -1143,56 +1439,157 @@ function Conversation({ signalStatus }) {
               two.
             </p>
           </div>
+
           {messages.map((message, index) => {
             const mine = String(message.senderId) === String(authUser?._id);
             const body = message.content ?? message.text;
             const attachment = message.attachment;
+            const isDeleted = message.type === "deleted";
+            const isEditing = editingMessageId === message.clientMessageId;
 
-            if (!body && !attachment) return null;
+            if (!isDeleted && !body && !attachment) return null;
+
             return (
               <div
                 key={message.clientMessageId || message._id || index}
                 className={`message-row ${mine ? "mine" : "theirs"}`}
               >
                 {!mine && <Avatar user={selectedUser} size="tiny" />}
-                <div className="message-content">
-                  <div className="message-bubble">
-                    {attachment ? (
-                      <AttachmentPreview attachment={attachment} />
-                    ) : (
-                      body
-                    )}
-                  </div>{" "}
-                  <div className="message-meta">
-                    {formatTime(message.createdAt || Date.now())}
 
-                    {mine && (
-                      <span
-                        className={`read-check ${message.status || "sending"}`}
-                        title={
-                          message.status === "sending"
-                            ? "Sending"
-                            : message.status === "sent"
-                              ? "Sent"
-                              : message.status === "delivered"
-                                ? "Delivered"
-                                : message.status === "read"
-                                  ? "Read"
-                                  : "Failed to send"
+                <div className="message-content">
+                  {!isDeleted && (
+                    <div
+                      className="message-menu-container"
+                      onBlur={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                          setOpenMessageMenuId(null);
+                        }
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="message-menu-trigger"
+                        title="Message options"
+                        aria-label="Message options"
+                        aria-expanded={
+                          openMessageMenuId === message.clientMessageId
+                        }
+                        onClick={() =>
+                          setOpenMessageMenuId((current) =>
+                            current === message.clientMessageId
+                              ? null
+                              : message.clientMessageId,
+                          )
                         }
                       >
-                        {message.status === "sending" && "◷"}
-                        {message.status === "sent" && "✓"}
-                        {message.status === "delivered" && "✓✓"}
-                        {message.status === "read" && "✓✓"}
-                        {message.status === "failed" && "!"}
-                      </span>
-                    )}
-                  </div>
+                        ⋮
+                      </button>
+
+                      {openMessageMenuId === message.clientMessageId && (
+                        <div className="message-dropdown">
+                          {mine && !attachment && body && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMessageId(message.clientMessageId);
+                                setEditDraft(body);
+                                setOpenMessageMenuId(null);
+                              }}
+                            >
+                              <span>✎</span>
+                              Edit
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            disabled={
+                              deletingMessageId === message.clientMessageId
+                            }
+                            onClick={() => {
+                              setOpenMessageMenuId(null);
+                              deleteForMe(message);
+                            }}
+                          >
+                            <span>⌫</span>
+                            Delete for me
+                          </button>
+
+                          {mine && (
+                            <button
+                              type="button"
+                              className="delete-everyone-option"
+                              disabled={
+                                deletingMessageId === message.clientMessageId
+                              }
+                              onClick={() => {
+                                setOpenMessageMenuId(null);
+                                deleteForEveryone(message);
+                              }}
+                            >
+                              <span>🗑</span>
+                              Delete for everyone
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {isDeleted ? (
+                    <div className="message-bubble deleted-message">
+                      This message was deleted.
+                    </div>
+                  ) : isEditing ? (
+                    // Keep your existing edit textarea and Save/Cancel buttons here.
+                    <div className="message-edit-area">
+                      <textarea
+                        value={editDraft}
+                        onChange={(e) => setEditDraft(e.target.value)}
+                      />
+                      <div className=" save-edit">
+                        <button
+                        type="button"
+                        onClick={() => saveEdit(message)}
+                        disabled={savingEdit || !editDraft.trim()}
+                      >
+                        {savingEdit ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingMessageId(null);
+                          setEditDraft("");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="message-bubble">
+                      {attachment ? (
+                        <AttachmentPreview attachment={attachment} />
+                      ) : (
+                        body
+                      )}
+                    </div>
+                  )}
+
+                  {!isDeleted && (
+                    <div className="message-meta">
+                      {message.editedAt && (
+                        <span className="edited-label">Edited</span>
+                      )}
+                      {formatTime(message.createdAt || Date.now())}
+                      {mine && <span className="read-check">✓✓</span>}
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
+
           {typing && (
             <div className="typing-indicator">
               <span />

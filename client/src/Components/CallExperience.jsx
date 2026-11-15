@@ -16,8 +16,10 @@ export default function CallExperience({
   const localVideo = useRef(null);
   const remoteVideo = useRef(null);
   const remoteAudio = useRef(null);
+  const remoteStreamRef = useRef(null);
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
+  const finishingRef = useRef(false);
   const pendingCandidates = useRef([]);
   const [status, setStatus] = useState(incoming ? "connecting" : "calling");
   const [muted, setMuted] = useState(false);
@@ -26,7 +28,12 @@ export default function CallExperience({
   const [elapsed, setElapsed] = useState(0);
   const [quality, setQuality] = useState("checking");
   const [facingMode, setFacingMode] = useState("user");
+  // UUID used by Socket.IO and WebRTC.
   const callId = useRef(incoming?.callId || makeId());
+
+  // MongoDB _id used for call-history updates.
+  const callHistoryId = useRef(incoming?.historyId || null);
+
   const callHistoryStarted = useRef(false);
   const callHistoryFinished = useRef(false);
   const peerId = peer?._id;
@@ -76,6 +83,11 @@ export default function CallExperience({
 
   useEffect(() => {
     let disposed = false;
+    let audioStatsTimer = null;
+    let micMonitor = null;
+    let audioContext = null;
+    let microphoneSource = null;
+
     const configuration = {
       iceServers: [
         {
@@ -133,23 +145,131 @@ export default function CallExperience({
         });
         if (disposed) {
           stream.getTracks().forEach((track) => track.stop());
+          console.log(
+            "Local media tracks:",
+            stream.getTracks().map((track) => ({
+              kind: track.kind,
+              enabled: track.enabled,
+              muted: track.muted,
+              readyState: track.readyState,
+            })),
+          );
           return;
         }
         localStreamRef.current = stream;
+        const audioTrack = stream.getAudioTracks()[0];
+
+        console.log("LOCAL MICROPHONE:", {
+          label: audioTrack?.label,
+          enabled: audioTrack?.enabled,
+          muted: audioTrack?.muted,
+          readyState: audioTrack?.readyState,
+          settings: audioTrack?.getSettings(),
+        });
+        const context = new AudioContext();
+        audioContext = context;
+
+        console.log("AudioContext state:", context.state);
+
+        context.onstatechange = () => {
+          if (audioContext !== context) return;
+
+          console.log("AudioContext state changed:", context.state);
+        };
+        microphoneSource = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+
+        analyser.fftSize = 2048;
+        microphoneSource.connect(analyser);
+
+        const samples = new Uint8Array(analyser.fftSize);
+
+        micMonitor = setInterval(() => {
+          analyser.getByteTimeDomainData(samples);
+
+          let sum = 0;
+
+          for (const sample of samples) {
+            const normalized = (sample - 128) / 128;
+            sum += normalized * normalized;
+          }
+
+          const rms = Math.sqrt(sum / samples.length);
+
+          console.log("LOCAL MICROPHONE LEVEL:", rms.toFixed(4));
+        }, 2000);
+
         if (localVideo.current) localVideo.current.srcObject = stream;
 
         const pc = new RTCPeerConnection(configuration);
         pcRef.current = pc;
+
+        audioStatsTimer = setInterval(async () => {
+          const pc = pcRef.current;
+          if (!pc) return;
+
+          const stats = await pc.getStats();
+
+          stats.forEach((report) => {
+            if (report.type === "inbound-rtp" && report.kind === "audio") {
+              console.log("Incoming audio statistics:", {
+                bytesReceived: report.bytesReceived,
+                packetsReceived: report.packetsReceived,
+                audioLevel: report.audioLevel,
+              });
+            }
+
+            if (report.type === "outbound-rtp" && report.kind === "audio") {
+              console.log("Outgoing audio statistics:", {
+                bytesSent: report.bytesSent,
+                packetsSent: report.packetsSent,
+              });
+            }
+          });
+        }, 2000);
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
         pc.ontrack = (event) => {
-          if (remoteVideo.current) {
-            remoteVideo.current.srcObject = event.streams[0];
-            remoteVideo.current.play().catch(() => {});
+          console.log("Remote track received:", {
+            kind: event.track.kind,
+            enabled: event.track.enabled,
+            muted: event.track.muted,
+            readyState: event.track.readyState,
+          });
+
+          const remoteStream =
+            event.streams[0] || new MediaStream([event.track]);
+
+          remoteStreamRef.current = remoteStream;
+
+          const mediaElement =
+            kind === "video" ? remoteVideo.current : remoteAudio.current;
+
+          if (mediaElement && mediaElement.srcObject !== remoteStream) {
+            mediaElement.srcObject = remoteStream;
+
+            mediaElement.muted = false;
+            mediaElement.volume = 1;
+
+            mediaElement
+              .play()
+              .then(() => {
+                console.log("Remote playback started:", {
+                  kind: event.track.kind,
+                  paused: mediaElement.paused,
+                  muted: mediaElement.muted,
+                  volume: mediaElement.volume,
+                  readyState: mediaElement.readyState,
+                });
+              })
+              .catch((error) => {
+                console.error("Remote media playback failed:", error);
+              });
           }
-          if (kind === "audio" && remoteAudio.current) {
-            remoteAudio.current.srcObject = event.streams[0];
-            remoteAudio.current.play().catch(() => {});
-          }
+
+          event.track.onunmute = () => {
+            console.log("Remote track is now unmuted:", event.track.kind);
+          };
+
           setStatus("connected");
         };
         pc.onicecandidate = (event) => {
@@ -223,24 +343,28 @@ export default function CallExperience({
             payload.callId !== callId.current ||
             payload.peerId !== peerId ||
             isIncoming
-          )
+          ) {
             return;
+          }
 
-          await axiosInstance.post("/call/start", {
-            callId: callId.current,
-            callerId: authUser._id,
-            receiverId: peerId,
-            kind: kind === "audio" ? "Audio" : "Video",
-            status: "accepted",
-          });
+          // The recipient already updated the existing history record.
+          // The caller only needs to establish the WebRTC connection.
           const offer = await pc.createOffer({
             offerToReceiveAudio: true,
             offerToReceiveVideo: kind === "video",
           });
+
           await pc.setLocalDescription(offer);
-          await emit("webrtc:offer", { peerId, callId: callId.current, offer });
+
+          await emit("webrtc:offer", {
+            peerId,
+            callId: callId.current,
+            offer,
+          });
+
           setStatus("connecting");
         };
+
         const handleHangup = (payload) => {
           if (payload.callId === callId.current && payload.peerId === peerId) {
             finish(false, "ended");
@@ -260,30 +384,32 @@ export default function CallExperience({
         socket?.on("call:reject", handleReject);
 
         if (!isIncoming) {
-          // Create a ringing record before sending the invitation.
-          await axiosInstance.post("/call/start", {
-            callId: callId.current,
+          // Create the ringing history record.
+          const { data } = await axiosInstance.post("/call/start", {
             callerId: authUser._id,
             receiverId: peerId,
             kind: kind === "audio" ? "Audio" : "Video",
             status: "ringing",
           });
 
+          callHistoryId.current = data.call._id;
           callHistoryStarted.current = true;
 
+          // Send both identifiers to the recipient.
           await emit("call:invite", {
             peerId,
             callId: callId.current,
+            historyId: callHistoryId.current,
             kind,
           });
         } else {
-          // The outgoing caller has already created the ringing record.
-          // The recipient updates it to accepted.
-          await axiosInstance.post("/call/start", {
-            callId: callId.current,
-            callerId: incoming.callerId || peerId,
-            receiverId: authUser._id,
-            kind: kind === "audio" ? "Audio" : "Video",
+          // The outgoing caller already created the history record.
+          // Reuse its MongoDB ID instead of creating another record.
+          if (!callHistoryId.current) {
+            throw new Error("Call history identifier is missing.");
+          }
+
+          await axiosInstance.patch(`/call/${callHistoryId.current}/finish`, {
             status: "accepted",
           });
 
@@ -319,17 +445,57 @@ export default function CallExperience({
     });
     return () => {
       disposed = true;
+
+      clearInterval(audioStatsTimer);
+      clearInterval(micMonitor);
+
+      if (microphoneSource) {
+        try {
+          microphoneSource.disconnect();
+        } catch (error) {
+          console.warn("Unable to disconnect microphone source:", error);
+        }
+
+        microphoneSource = null;
+      }
+
+      if (audioContext) {
+        const contextToClose = audioContext;
+
+        // Prevent callbacks from accessing a context being closed.
+        contextToClose.onstatechange = null;
+
+        audioContext = null;
+
+        if (contextToClose.state !== "closed") {
+          contextToClose.close().catch((error) => {
+            console.warn("Unable to close AudioContext:", error);
+          });
+        }
+      }
+
       cleanup?.();
+
       localStreamRef.current?.getTracks().forEach((track) => track.stop());
-      pcRef.current?.getSenders().forEach((sender) => sender.track?.stop());
-      pcRef.current?.close();
-      pcRef.current = null;
+      localStreamRef.current = null;
+
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+
+      remoteStreamRef.current = null;
     };
   }, [socket, peerId, kind, isIncoming]);
 
   async function finish(notify = true, finalStatus = "ended") {
-    if (status === "ended") return;
+    // Prevent multiple hangup events from finalizing the same call.
+    if (finishingRef.current) return;
 
+    finishingRef.current = true;
+    callHistoryFinished.current = true;
+
+    // Notify the other participant.
     if (notify) {
       socket?.emit("call:hangup", {
         peerId,
@@ -337,12 +503,40 @@ export default function CallExperience({
       });
     }
 
-    if (callHistoryStarted.current && !callHistoryFinished.current) {
-      callHistoryFinished.current = true;
+    // Stop local media immediately.
+    localStreamRef.current?.getTracks().forEach((track) => track.stop());
+    localStreamRef.current = null;
 
+    // Close WebRTC immediately.
+    if (pcRef.current) {
+      pcRef.current.ontrack = null;
+      pcRef.current.onicecandidate = null;
+      pcRef.current.onconnectionstatechange = null;
+      pcRef.current.oniceconnectionstatechange = null;
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+
+    // Release remote media references.
+    if (remoteAudio.current) {
+      remoteAudio.current.srcObject = null;
+    }
+
+    if (remoteVideo.current) {
+      remoteVideo.current.srcObject = null;
+    }
+
+    remoteStreamRef.current = null;
+
+    setStatus("ended");
+    onClose();
+
+    // Save call history independently of UI cleanup.
+    if (callHistoryStarted.current && callHistoryId.current) {
       try {
-        await axiosInstance.patch(`/call/${callId.current}/finish`, {
+        await axiosInstance.patch(`/call/${callHistoryId.current}/finish`, {
           status: finalStatus,
+          durationSeconds: elapsed,
         });
 
         await useCallStore.getState().getAllCall(authUser._id);
@@ -350,13 +544,6 @@ export default function CallExperience({
         console.error("Unable to finalize call history:", error);
       }
     }
-
-    localStreamRef.current?.getTracks().forEach((track) => track.stop());
-
-    pcRef.current?.close();
-
-    setStatus("ended");
-    onClose();
   }
 
   async function switchCamera() {

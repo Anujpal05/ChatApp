@@ -13,6 +13,9 @@ import {
 import {
   getEncryptedHistory,
   saveEncryptedHistory,
+  deleteEncryptedHistoryForMe,
+  deleteEncryptedHistoryForEveryone,
+  updateEncryptedHistory,
   uploadEncryptedAttachment,
   markEncryptedMessagesDelivered,
   markEncryptedMessagesRead,
@@ -51,6 +54,27 @@ router.post(
   verifyToken,
   rateLimit({ max: 120 }),
   saveEncryptedHistory,
+);
+
+router.patch(
+  "/history/:peerId",
+  verifyToken,
+  rateLimit({ max: 60 }),
+  updateEncryptedHistory,
+);
+
+router.patch(
+  "/history/:peerId/delete-for-me",
+  verifyToken,
+  rateLimit({ max: 60 }),
+  deleteEncryptedHistoryForMe,
+);
+
+router.patch(
+  "/history/:peerId/delete-for-everyone",
+  verifyToken,
+  rateLimit({ max: 30 }),
+  deleteEncryptedHistoryForEveryone,
 );
 
 // Encrypted attachment upload

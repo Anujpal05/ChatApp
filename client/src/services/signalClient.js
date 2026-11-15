@@ -8,22 +8,33 @@ import { axiosInstance } from "../../utils/axios";
 let clientPromise;
 let messageHandler = () => {};
 
-export const setDecryptedMessageHandler = (handler) => { messageHandler = handler || (() => {}); };
+export const setDecryptedMessageHandler = (handler) => {
+  messageHandler = handler || (() => {});
+};
 
 export async function getSignalClient() {
   if (clientPromise) return clientPromise;
   clientPromise = (async () => {
     const relayUrl = import.meta.env.VITE_OPEN_E2EE_SIGNAL_RELAY_URL;
-    if (!relayUrl) throw new Error("Signal Relay is not configured. Set VITE_OPEN_E2EE_SIGNAL_RELAY_URL.");
+    if (!relayUrl)
+      throw new Error(
+        "Signal Relay is not configured. Set VITE_OPEN_E2EE_SIGNAL_RELAY_URL.",
+      );
 
     const sdk = await import("@open-e2ee/signal-protocol-sdk");
-    const store = await import("@open-e2ee/signal-protocol-sdk/local/store/web");
+    const store =
+      await import("@open-e2ee/signal-protocol-sdk/local/store/web");
 
     const storage = await store.indexedDbStore();
 
     const getIdentityAssertion = async (request) => {
-      const { data } = await axiosInstance.post("/e2ee/identity-assertion", request, { headers: { "Cache-Control": "no-store" } });
-      if (typeof data.assertion !== "string") throw new Error("Signal Relay identity assertion was not returned.");
+      const { data } = await axiosInstance.post(
+        "/e2ee/identity-assertion",
+        request,
+        { headers: { "Cache-Control": "no-store" } },
+      );
+      if (typeof data.assertion !== "string")
+        throw new Error("Signal Relay identity assertion was not returned.");
       return data.assertion;
     };
 
@@ -33,10 +44,14 @@ export async function getSignalClient() {
     });
     signal.registerHook("onMessageDecrypted", (envelope) => {
       messageHandler({
+        messageId:
+          envelope.messageId || envelope.id || envelope.envelopeId || null,
         conversationId: envelope.conversationId,
         senderId: envelope.senderId,
         content: envelope.content,
-        createdAt: envelope.timestamp ? new Date(envelope.timestamp) : new Date(),
+        createdAt: envelope.timestamp
+          ? new Date(envelope.timestamp)
+          : new Date(),
         protocol: "signal",
       });
     });
@@ -50,7 +65,8 @@ export async function getSignalClient() {
 }
 
 export async function sendSignalMessage(recipientSignalId, content) {
-  if (!recipientSignalId) throw new Error("The recipient has not registered an E2EE device yet.");
+  if (!recipientSignalId)
+    throw new Error("The recipient has not registered an E2EE device yet.");
   const signal = await getSignalClient();
   return signal.send(recipientSignalId, content);
 }

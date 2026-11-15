@@ -2003,3 +2003,25 @@ select:focus-visible {
     min-height: 0;
   }
 }
+
+.read-check {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.read-check.sending,
+.read-check.sent,
+.read-check.delivered {
+  color: #999;
+}
+
+.read-check.read {
+  color: #2697f5;
+}
+
+.read-check.failed {
+  color: #e5484d;
+}

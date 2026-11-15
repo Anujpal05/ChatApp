@@ -10,6 +10,12 @@ import {
   setDecryptedMessageHandler,
 } from "../services/signalClient";
 import CallExperience from "../Components/CallExperience";
+import {
+  saveMessageHistory,
+  loadMessageHistory,
+  encryptAndUploadAttachment,
+  downloadAndDecryptAttachment,
+} from "../services/messageArchive";
 
 const initials = (name = "?") => name.slice(0, 1).toUpperCase();
 const formatTime = (date) =>
@@ -397,17 +403,243 @@ function StoriesModal({ onClose, onCreated }) {
   );
 }
 
+function AttachmentPreview({ attachment }) {
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl;
+
+    async function loadPreview() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const blob = await downloadAndDecryptAttachment(attachment);
+
+        if (!active) return;
+
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      } catch (err) {
+        console.error("[Attachment] Preview decryption failed:", err);
+        if (active) setError("Unable to decrypt attachment.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadPreview();
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment?.url, attachment?.fileKey, attachment?.iv]);
+
+  // Close viewer with Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const downloadImage = (event) => {
+    event.stopPropagation();
+
+    const link = document.createElement("a");
+    link.href = previewUrl;
+    link.download = attachment.fileName || "quicktalk-image";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  if (loading) return <div>Decrypting attachment...</div>;
+  if (error) return <div>{error}</div>;
+  if (!previewUrl) return null;
+
+  const isImage = attachment.mimeType?.startsWith("image/");
+
+  return (
+    <>
+      {isImage ? (
+        <img
+          src={previewUrl}
+          alt={attachment.fileName || "Shared image"}
+          onClick={() => setIsOpen(true)}
+          style={{
+            display: "block",
+            maxWidth: "240px",
+            maxHeight: "240px",
+            objectFit: "contain",
+            borderRadius: "10px",
+            cursor: "pointer",
+          }}
+        />
+      ) : (
+        <button onClick={downloadImage}>
+          <icon-placeholder />
+          Download {attachment.fileName || "attachment"}
+        </button>
+      )}
+
+      {isImage && (
+        <div
+          onClick={() => setIsOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0, 0, 0, 0.92)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: isOpen ? 1 : 0,
+            visibility: isOpen ? "visible" : "hidden",
+            transition: "opacity 250ms ease, visibility 250ms ease",
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              transform: isOpen ? "scale(1)" : "scale(0.95)",
+              transition: "transform 250ms ease",
+            }}
+          >
+            <img
+              src={previewUrl}
+              alt={attachment.fileName || "Shared image"}
+              style={{
+                display: "block",
+                maxWidth: "90vw",
+                maxHeight: "85vh",
+                objectFit: "contain",
+                borderRadius: "8px",
+              }}
+            />
+
+            {/* Top-right action buttons */}
+            <div
+              style={{
+                position: "absolute",
+                top: "-48px",
+                right: 0,
+                display: "flex",
+                gap: "12px",
+              }}
+            >
+              <button
+                onClick={downloadImage}
+                title="Download image"
+                aria-label="Download image"
+                style={viewerButtonStyle}
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <path d="m7 10 5 5 5-5" />
+                  <path d="M12 15V3" />
+                </svg>
+              </button>
+
+              <button
+                onClick={() => setIsOpen(false)}
+                title="Close image"
+                aria-label="Close image viewer"
+                style={viewerButtonStyle}
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+const viewerButtonStyle = {
+  width: "40px",
+  height: "40px",
+  borderRadius: "50%",
+  border: "none",
+  background: "rgba(255, 255, 255, 0.15)",
+  color: "#ffffff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+};
+
 function Conversation({ signalStatus }) {
   const { authUser, socket, onlineUsers } = useAuthStore();
-  const { selectedUser, messages, addMessage } = useChatStore();
+  const {
+    selectedUser,
+    messages,
+    addMessage,
+    setMessages,
+    updateMessageStatus,
+  } = useChatStore();
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
   const [sending, setSending] = useState(false);
   const [call, setCall] = useState(null);
   const [aiOpen, setAiOpen] = useState(false);
   const bottomRef = useRef(null);
+  const fileInputRef = useRef(null);
   const typingTimer = useRef(null);
   const peerOnline = selectedUser && onlineUsers.includes(selectedUser._id);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFilePreview, setSelectedFilePreview] = useState("");
+
+  useEffect(() => {
+    if (!selectedFile || !selectedFile.type.startsWith("image/")) {
+      setSelectedFilePreview("");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setSelectedFilePreview(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedFile]);
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -422,50 +654,300 @@ function Conversation({ signalStatus }) {
   }, [selectedUser?._id, socket]);
 
   useEffect(() => {
+    if (!socket) return;
+
+    const handleDelivered = ({ clientMessageIds, deliveredAt }) => {
+      updateMessageStatus(clientMessageIds || [], "delivered", {
+        deliveredAt,
+      });
+    };
+
+    const handleRead = ({ clientMessageIds, readAt }) => {
+      updateMessageStatus(clientMessageIds || [], "read", {
+        readAt,
+      });
+    };
+
+    socket.on("message:delivered", handleDelivered);
+    socket.on("message:read", handleRead);
+
+    return () => {
+      socket.off("message:delivered", handleDelivered);
+      socket.off("message:read", handleRead);
+    };
+  }, [socket, updateMessageStatus]);
+
+  useEffect(() => {
+    if (!selectedUser?._id || !authUser?._id) return;
+
+    let active = true;
+
+    async function fetchHistory() {
+      try {
+        console.log("[Archive] Loading conversation history...");
+
+        const history = await loadMessageHistory({
+          userId: authUser._id,
+          peerId: selectedUser._id,
+        });
+
+        if (!active) return;
+
+        // Keep messages received while the history request was running.
+        const currentMessages = useChatStore.getState().messages;
+
+        const mergedMessages = [...history, ...currentMessages];
+
+        // Remove duplicates using the stable client message ID.
+        const uniqueMessages = Array.from(
+          new Map(
+            mergedMessages.map((message) => [message.clientMessageId, message]),
+          ).values(),
+        );
+
+        // Display messages in chronological order.
+        uniqueMessages.sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        );
+
+        setMessages(uniqueMessages);
+
+        console.log(
+          `[Archive] Loaded ${history.length} messages from MongoDB.`,
+        );
+      } catch (error) {
+        console.error("[Archive] History loading failed:", error);
+        toast.error("Unable to load encrypted message history.");
+      }
+    }
+
+    fetchHistory();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedUser?._id, authUser?._id, setMessages]);
+
+  useEffect(() => {
+    if (!selectedUser?._id || !authUser?._id) return;
+
+    const unreadMessages = messages.filter(
+      (message) =>
+        String(message.senderId) === String(selectedUser._id) &&
+        String(message.receiverId) === String(authUser._id) &&
+        message.status !== "read" &&
+        !message.readAt &&
+        message.clientMessageId,
+    );
+
+    if (!unreadMessages.length) return;
+
+    const clientMessageIds = unreadMessages.map(
+      (message) => message.clientMessageId,
+    );
+
+    let active = true;
+
+    async function markConversationRead() {
+      try {
+        const { data } = await axiosInstance.patch(
+          `/message/history/${selectedUser._id}/read`,
+          { clientMessageIds },
+        );
+
+        if (!active) return;
+
+        updateMessageStatus(clientMessageIds, "read", {
+          readAt: data.readAt,
+        });
+
+        console.log("[Receipt] Messages marked as read:", clientMessageIds);
+      } catch (error) {
+        console.error("[Receipt] Read confirmation failed:", error);
+      }
+    }
+
+    markConversationRead();
+
+    return () => {
+      active = false;
+    };
+  }, [messages, selectedUser?._id, authUser?._id, updateMessageStatus]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   async function send() {
     const value = draft.trim();
+
     if (!value || !selectedUser || sending) return;
+
     setSending(true);
+
+    const clientMessageId = crypto.randomUUID();
+    const createdAt = new Date();
+
+    // Add the message immediately to the sender's chat.
+    const message = {
+      clientMessageId,
+      content: value,
+      senderId: authUser._id,
+      receiverId: selectedUser._id,
+      createdAt,
+      protocol: "signal",
+      status: "sending",
+    };
+
+    addMessage(message);
+    setDraft("");
+
+    // Send a structured payload so both devices use the same message ID.
+    const payload = {
+      type: "text",
+      clientMessageId,
+      content: value,
+      createdAt: createdAt.toISOString(),
+    };
+
     try {
-      // The selected contact may have been loaded before they registered E2EE.
-      // Refresh their Signal identity once before attempting encryption.
-      let recipient = selectedUser;
-      if (!recipient.signalUserId) {
-        const { data } = await axiosInstance.get("/user/get-all-users");
-        recipient = (data.users || []).find(
-          (user) => String(user._id) === String(selectedUser._id),
-        ) || recipient;
-        if (recipient.signalUserId) {
-          useChatStore.getState().setSelectedUser(recipient);
-        }
-      }
-      if (!recipient.signalUserId) {
-        throw new Error(
-          "This contact has not registered an E2EE device yet. Ask them to sign in to QuickTalk and open the chat page, then refresh your contacts."
-        );
-      }
-      const result = await sendSignalMessage(recipient.signalUserId, value);
-      const message = {
-        clientMessageId: result?.messageId || crypto.randomUUID(),
-        content: value,
-        senderId: authUser._id,
-        createdAt: new Date(),
-        protocol: "signal",
-        status: "sent",
-      };
-      addMessage(message);
-      setDraft("");
-      socket?.emit("typing:stop", { peerId: selectedUser._id });
-    } catch (error) {
-      toast.error(
-        error?.message ||
-          "Signal encryption is not configured. See the setup guide.",
+      await sendSignalMessage(
+        selectedUser.signalUserId,
+        JSON.stringify(payload),
       );
+
+      // Signal Relay accepted the message.
+      updateMessageStatus(clientMessageId, "sent");
+
+      // Save the independently encrypted history copy.
+      try {
+        await saveMessageHistory({
+          userId: authUser._id,
+          peerId: selectedUser._id,
+          senderId: authUser._id,
+          receiverId: selectedUser._id,
+          clientMessageId,
+          payload,
+        });
+
+        console.log("[Archive] Message saved in MongoDB.");
+      } catch (archiveError) {
+        console.error("[Archive] Message save failed:", archiveError);
+        toast.error("Message sent, but saving its history failed.");
+      }
+
+      socket?.emit("typing:stop", {
+        peerId: selectedUser._id,
+      });
+    } catch (error) {
+      console.error("[Message] Sending failed:", error);
+
+      updateMessageStatus(clientMessageId, "failed");
+
+      toast.error(error?.message || "Unable to send encrypted message.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function sendAttachment(file) {
+    if (!file || !selectedUser || uploadingFile) return;
+
+    const allowedTypes = ["image/", "audio/", "video/"];
+
+    if (!allowedTypes.some((type) => file.type.startsWith(type))) {
+      toast.error("Only image, audio and video files are supported.");
+      return;
+    }
+
+    setUploadingFile(true);
+
+    try {
+      let recipient = selectedUser;
+
+      if (!recipient.signalUserId) {
+        const { data } = await axiosInstance.get("/user/get-all-users");
+
+        recipient =
+          (data.users || []).find(
+            (user) => String(user._id) === String(selectedUser._id),
+          ) || recipient;
+      }
+
+      if (!recipient.signalUserId) {
+        throw new Error("Recipient has not registered an E2EE device.");
+      }
+
+      // Encrypt file bytes and upload encrypted bytes to Cloudinary.
+      const attachment = await encryptAndUploadAttachment(file);
+
+      const clientMessageId = crypto.randomUUID();
+
+      const payload = {
+        type: "attachment",
+        clientMessageId,
+        attachment,
+        senderId: authUser._id,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Deliver attachment metadata and file key inside Signal encryption.
+      await sendSignalMessage(recipient.signalUserId, JSON.stringify(payload));
+
+      // Save encrypted archive copy in MongoDB.
+      await saveMessageHistory({
+        userId: authUser._id,
+        peerId: selectedUser._id,
+        senderId: authUser._id,
+        receiverId: selectedUser._id,
+        clientMessageId,
+        payload,
+      });
+
+      addMessage({
+        ...payload,
+        content: "",
+        createdAt: new Date(payload.createdAt),
+        protocol: "signal",
+        status: "sent",
+      });
+
+      toast.success("Attachment sent.");
+      return true;
+    } catch (error) {
+      console.error("Attachment sending failed:", error);
+      toast.error(error.message || "Unable to send attachment.");
+      return false;
+    } finally {
+      setUploadingFile(false);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  async function handleSend() {
+    if (sending || uploadingFile) return;
+
+    const fileToSend = selectedFile;
+    const hasText = Boolean(draft.trim());
+
+    if (!fileToSend && !hasText) return;
+
+    // Send the selected attachment first.
+    if (fileToSend) {
+      const success = await sendAttachment(fileToSend);
+
+      if (!success) return;
+
+      setSelectedFile(null);
+    }
+
+    // Send the text, if the user also typed a message.
+    if (hasText) {
+      await send();
     }
   }
 
@@ -481,17 +963,102 @@ function Conversation({ signalStatus }) {
   }
 
   useEffect(() => {
-    setDecryptedMessageHandler((envelope) => {
-      if (envelope.senderId === selectedUser?.signalUserId) {
-        addMessage({
-          ...envelope,
-          clientMessageId: `${envelope.senderId}-${new Date(envelope.createdAt).getTime()}`,
+    if (!selectedUser?._id || !authUser?._id) return;
+
+    setDecryptedMessageHandler(async (envelope) => {
+      // Only process messages from the currently selected contact.
+      if (envelope.senderId !== selectedUser.signalUserId) {
+        return;
+      }
+
+      const createdAt = new Date(envelope.createdAt);
+
+      // Parse the decrypted Signal message.
+      let payload;
+
+      try {
+        payload = JSON.parse(envelope.content);
+      } catch {
+        // Ordinary text messages are not JSON.
+        payload = {
+          type: "text",
           content: envelope.content,
+        };
+      }
+
+      const isAttachment =
+        payload.type === "attachment" && Boolean(payload.attachment?.url);
+
+      const clientMessageId =
+        payload.clientMessageId ||
+        envelope.messageId ||
+        `${envelope.senderId}-${createdAt.getTime()}`;
+
+      const message = {
+        ...payload,
+        clientMessageId,
+        content: isAttachment ? "" : payload.content,
+        senderId: selectedUser._id,
+        receiverId: authUser._id,
+        createdAt: payload.createdAt ? new Date(payload.createdAt) : createdAt,
+        protocol: "signal",
+        status: "received",
+      };
+
+      // Display the received message immediately.
+      addMessage(message);
+
+      // Confirm that this device received and decrypted the message.
+      try {
+        await axiosInstance.patch(
+          `/message/history/${selectedUser._id}/delivered`,
+          {
+            clientMessageIds: [clientMessageId],
+          },
+        );
+
+        console.log("[Receipt] Delivery confirmed:", clientMessageId);
+      } catch (error) {
+        console.error("[Receipt] Delivery confirmation failed:", error);
+      }
+
+      // Save the correct message type in encrypted history.
+      try {
+        await saveMessageHistory({
+          userId: authUser._id,
+          peerId: selectedUser._id,
+          senderId: selectedUser._id,
+          receiverId: authUser._id,
+          clientMessageId,
+          payload: isAttachment
+            ? {
+                ...payload,
+                clientMessageId,
+                createdAt: message.createdAt.toISOString(),
+              }
+            : {
+                type: "text",
+                content: payload.content,
+                createdAt: message.createdAt.toISOString(),
+              },
         });
+
+        console.log(
+          `[Archive] Incoming ${isAttachment ? "attachment" : "message"} saved in MongoDB.`,
+        );
+      } catch (error) {
+        console.error("[Archive] Incoming message save failed:", error);
+        toast.error("Message received, but history could not be saved.");
       }
     });
+
     return () => setDecryptedMessageHandler(null);
-  }, [selectedUser?._id]);
+  }, [
+    selectedUser?._id,
+    selectedUser?.signalUserId,
+    authUser?._id,
+    addMessage,
+  ]);
 
   async function startCall(kind) {
     if (!peerOnline) return toast.error("This person is offline right now.");
@@ -579,7 +1146,9 @@ function Conversation({ signalStatus }) {
           {messages.map((message, index) => {
             const mine = String(message.senderId) === String(authUser?._id);
             const body = message.content ?? message.text;
-            if (!body) return null;
+            const attachment = message.attachment;
+
+            if (!body && !attachment) return null;
             return (
               <div
                 key={message.clientMessageId || message._id || index}
@@ -587,10 +1156,38 @@ function Conversation({ signalStatus }) {
               >
                 {!mine && <Avatar user={selectedUser} size="tiny" />}
                 <div className="message-content">
-                  <div className="message-bubble">{body}</div>
+                  <div className="message-bubble">
+                    {attachment ? (
+                      <AttachmentPreview attachment={attachment} />
+                    ) : (
+                      body
+                    )}
+                  </div>{" "}
                   <div className="message-meta">
                     {formatTime(message.createdAt || Date.now())}
-                    {mine && <span className="read-check">✓✓</span>}
+
+                    {mine && (
+                      <span
+                        className={`read-check ${message.status || "sending"}`}
+                        title={
+                          message.status === "sending"
+                            ? "Sending"
+                            : message.status === "sent"
+                              ? "Sent"
+                              : message.status === "delivered"
+                                ? "Delivered"
+                                : message.status === "read"
+                                  ? "Read"
+                                  : "Failed to send"
+                        }
+                      >
+                        {message.status === "sending" && "◷"}
+                        {message.status === "sent" && "✓"}
+                        {message.status === "delivered" && "✓✓"}
+                        {message.status === "read" && "✓✓"}
+                        {message.status === "failed" && "!"}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -615,24 +1212,120 @@ function Conversation({ signalStatus }) {
             </span>
             <button onClick={() => setAiOpen(true)}>✦ Improve with AI</button>
           </div>
+          {selectedFile && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 14px",
+                alignSelf: "flex-start",
+              }}
+            >
+              <div style={{ position: "relative" }}>
+                {selectedFilePreview ? (
+                  <img
+                    src={selectedFilePreview}
+                    alt="Selected attachment"
+                    style={{
+                      width: "70px",
+                      height: "70px",
+                      objectFit: "cover",
+                      borderRadius: "10px",
+                      border: "1px solid #888",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "70px",
+                      height: "70px",
+                      borderRadius: "10px",
+                      background: "#333",
+                      color: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "5px",
+                      fontSize: "11px",
+                      textAlign: "center",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {selectedFile.name}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedFile(null)}
+                  title="Remove attachment"
+                  aria-label="Remove selected attachment"
+                  style={{
+                    position: "absolute",
+                    top: "-8px",
+                    right: "-8px",
+                    width: "23px",
+                    height: "23px",
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "#e5484d",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: "16px",
+                    lineHeight: 1,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <span style={{ fontSize: "12px", opacity: 0.7 }}>
+                {selectedFile.name}
+              </span>
+            </div>
+          )}
           <div className="composer">
             <button
               className="composer-plus"
-              onClick={() =>
-                toast(
-                  "Encrypted attachments are part of the next media integration step.",
-                )
-              }
+              disabled={uploadingFile}
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach image, audio or video"
             >
-              ＋
+              {uploadingFile ? "…" : "＋"}
             </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,audio/*,video/*"
+              hidden
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+
+                if (!file) return;
+
+                const allowedTypes = ["image/", "audio/", "video/"];
+
+                if (!allowedTypes.some((type) => file.type.startsWith(type))) {
+                  toast.error(
+                    "Only image, audio and video files are supported.",
+                  );
+                  event.target.value = "";
+                  return;
+                }
+
+                setSelectedFile(file);
+                event.target.value = "";
+              }}
+            />
             <textarea
               value={draft}
               onChange={(e) => changeDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  send();
+                  handleSend();
                 }
               }}
               placeholder="Write a message…"
@@ -640,10 +1333,12 @@ function Conversation({ signalStatus }) {
             />
             <button
               className="send-button"
-              onClick={send}
-              disabled={!draft.trim() || sending}
+              onClick={handleSend}
+              disabled={
+                (!draft.trim() && !selectedFile) || sending || uploadingFile
+              }
             >
-              {sending ? "…" : "↑"}
+              {sending || uploadingFile ? "…" : "↑"}
             </button>
           </div>
           <div className="composer-foot">
@@ -705,51 +1400,54 @@ export default function Chat() {
   }, []);
   useEffect(() => {
     if (!socket) return;
-    const invite = (payload) => setIncomingCall(payload);
+    const invite = (payload) => {
+      setIncomingCall({
+        ...payload,
+        callerId: payload.peerId,
+      });
+    };
     socket.on("call:invite", invite);
     return () => socket.off("call:invite", invite);
   }, [socket]);
- 
 
-useEffect(() => {
-  let active = true;
+  useEffect(() => {
+    let active = true;
 
-  console.log("[E2EE] Initialization started");
+    console.log("[E2EE] Initialization started");
 
-  getSignalClient()
-    .then(async (signal) => {
-      console.log("[E2EE] Signal client created");
-      console.log("[E2EE] Signal user ID:", signal.userId);
+    getSignalClient()
+      .then(async (signal) => {
+        console.log("[E2EE] Signal client created");
+        console.log("[E2EE] Signal user ID:", signal.userId);
 
-      if (!active) return;
+        if (!active) return;
 
-      setSignalStatus("connected");
+        setSignalStatus("connected");
 
-      try {
-        const response = await axiosInstance.put("/user/signal-identity", {
-          signalUserId: signal.userId,
-        });
+        try {
+          const response = await axiosInstance.put("/user/signal-identity", {
+            signalUserId: signal.userId,
+          });
 
-        console.log("[E2EE] Identity saved:", response.status);
+          console.log("[E2EE] Identity saved:", response.status);
 
-        await loadData();
-      } catch (error) {
-        console.error("[E2EE] Identity save failed:", error);
-      }
-    })
-    .catch((error) => {
-      console.error("[E2EE] Initialization failed:", error);
+          await loadData();
+        } catch (error) {
+          console.error("[E2EE] Identity save failed:", error);
+        }
+      })
+      .catch((error) => {
+        console.error("[E2EE] Initialization failed:", error);
 
-      if (active) {
-        setSignalStatus("not-configured");
-      }
-    });
+        if (active) {
+          setSignalStatus("not-configured");
+        }
+      });
 
-  return () => {
-    active = false;
-  };
-}, []);
-
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <main className={`app-shell ${selectedUser ? "has-selection" : ""}`}>

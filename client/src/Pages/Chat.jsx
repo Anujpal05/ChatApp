@@ -45,6 +45,7 @@ function Sidebar({
   setTab,
   query,
   setQuery,
+  onOpenStory,
 }) {
   const { authUser, onlineUsers, logOut } = useAuthStore();
   const { selectedUser, setSelectedUser } = useChatStore();
@@ -108,7 +109,6 @@ function Sidebar({
                 : "Search call history…"
           }
         />
-        <kbd>⌘ K</kbd>
         <button
           className="refresh-contacts"
           title="Refresh people"
@@ -118,7 +118,7 @@ function Sidebar({
         </button>
       </div>
       {tab === "stories" ? (
-        <div className="people-list">
+        <div className="people-list stories-list">
           <button className="story-create" onClick={onStory}>
             <span>＋</span>
             <div>
@@ -126,23 +126,42 @@ function Sidebar({
               <small>Share a moment for 24 hours</small>
             </div>
           </button>
-          {stories.map((story) => (
-            <button
-              className="person-row"
-              key={story._id}
-              onClick={() =>
-                window.open(story.mediaUrl, "_blank", "noopener,noreferrer")
-              }
-            >
-              <span className="story-ring">
-                <Avatar user={story.userId} />
-              </span>
-              <div className="person-copy">
-                <b>{story.userId?.userName}</b>
-                <small>{story.caption || "New story"}</small>
-              </div>
-            </button>
-          ))}
+
+          {groupStoriesByUser(stories).map((group) => {
+            const isMine = String(group.userId) === String(authUser?._id);
+            const latestStory = group.stories[group.stories.length - 1];
+
+            return (
+              <button
+                className="person-row story-person-row"
+                key={group.userId}
+                onClick={() => onOpenStory(group.userId)}
+              >
+                <span className="story-ring">
+                  <Avatar user={group.user} />
+                </span>
+
+                <div className="person-copy">
+                  <b>{isMine ? "My status" : group.user?.userName}</b>
+                  <small>
+                    {isMine
+                      ? "Tap to view your story"
+                      : latestStory?.caption || "New story"}
+                  </small>
+                </div>
+
+                <small className="story-count">{group.stories.length}</small>
+              </button>
+            );
+          })}
+
+          {stories.length === 0 && (
+            <div className="empty-side">
+              <span>◉</span>
+              <b>No stories yet</b>
+              <small>Share a moment or check back later.</small>
+            </div>
+          )}
         </div>
       ) : tab === "calls" ? null : (
         <div className="people-list">
@@ -331,17 +350,68 @@ function AICompanion({ open, onClose }) {
 }
 
 function StoriesModal({ onClose, onCreated }) {
-  const [mediaUrl, setMediaUrl] = useState("");
+  const [file, setFile] = useState(null);
   const [caption, setCaption] = useState("");
-  const [mediaType, setMediaType] = useState("image");
+  const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!file) {
+      setPreview("");
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  function selectFile(e) {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+
+    const isImage = selected.type.startsWith("image/");
+    const isVideo = selected.type.startsWith("video/");
+
+    if (!isImage && !isVideo) {
+      toast.error("Select an image or video.");
+      e.target.value = "";
+      return;
+    }
+
+    const maxSize = isImage ? 10 : 50;
+
+    if (selected.size > maxSize * 1024 * 1024) {
+      toast.error(
+        `Maximum ${isImage ? "image" : "video"} size is ${maxSize} MB.`,
+      );
+      e.target.value = "";
+      return;
+    }
+
+    setFile(selected);
+  }
+
   async function submit(e) {
     e.preventDefault();
+
+    if (!file) {
+      toast.error("Choose a photo or video first.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("media", file);
+    formData.append("caption", caption);
+
     setBusy(true);
+
     try {
-      await axiosInstance.post("/stories", { mediaUrl, caption, mediaType });
+      await axiosInstance.post("/stories", formData);
+
       toast.success("Story shared for 24 hours.");
-      onCreated();
+      await onCreated();
       onClose();
     } catch (error) {
       toast.error(error?.response?.data?.message || "Unable to share story.");
@@ -349,10 +419,11 @@ function StoriesModal({ onClose, onCreated }) {
       setBusy(false);
     }
   }
+
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop story-modal-backdrop" onClick={onClose}>
       <form
-        className="modal-card"
+        className="modal-card story-upload-modal"
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
       >
@@ -361,30 +432,40 @@ function StoriesModal({ onClose, onCreated }) {
             <span className="eyebrow">A MOMENT TO SHARE</span>
             <h3>Create a story</h3>
           </div>
-          <button type="button" className="icon-button" onClick={onClose}>
+
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onClose}
+            disabled={busy}
+          >
             ×
           </button>
         </div>
-        <label>
-          Media URL
+
+        <label className="story-file-picker">
           <input
-            type="url"
-            value={mediaUrl}
-            onChange={(e) => setMediaUrl(e.target.value)}
-            placeholder="https://…"
-            required
+            type="file"
+            accept="image/*,video/*"
+            onChange={selectFile}
+            disabled={busy}
           />
+
+          <span>＋</span>
+          <b>Choose photo or video</b>
+          <small>Images up to 10 MB · Videos up to 50 MB</small>
         </label>
-        <label>
-          Media type
-          <select
-            value={mediaType}
-            onChange={(e) => setMediaType(e.target.value)}
-          >
-            <option value="image">Image</option>
-            <option value="video">Video</option>
-          </select>
-        </label>
+
+        {preview && (
+          <div className="story-upload-preview">
+            {file?.type.startsWith("video/") ? (
+              <video src={preview} controls />
+            ) : (
+              <img src={preview} alt="Story preview" />
+            )}
+          </div>
+        )}
+
         <label>
           Caption
           <input
@@ -392,18 +473,369 @@ function StoriesModal({ onClose, onCreated }) {
             onChange={(e) => setCaption(e.target.value)}
             maxLength={240}
             placeholder="Add a thought…"
+            disabled={busy}
           />
         </label>
-        <p className="modal-hint">
-          Stories are currently visible to signed-in users and expire after 24
-          hours. Upload media to your storage first.
-        </p>
-        <button className="primary-button" disabled={busy}>
-          {busy ? "Sharing…" : "Share story"} ↗
+
+        <div className="story-caption-count">{caption.length}/240</div>
+
+        <button
+          className="primary-button"
+          type="submit"
+          disabled={busy || !file}
+        >
+          {busy ? "Uploading…" : "Share story"} ↗
         </button>
       </form>
     </div>
   );
+}
+
+function StoryViewer({
+  stories,
+  initialUserId,
+  currentUserId,
+  onClose,
+  onRefresh,
+}) {
+  const groups = groupStoriesByUser(stories);
+
+  const [groupIndex, setGroupIndex] = useState(() =>
+    Math.max(
+      0,
+      groups.findIndex((group) => group.userId === String(initialUserId)),
+    ),
+  );
+
+  const [storyIndex, setStoryIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showViewers, setShowViewers] = useState(false);
+  const [storyViewers, setStoryViewers] = useState([]);
+  const [viewerCount, setViewerCount] = useState(0);
+  const [loadingViewers, setLoadingViewers] = useState(false);
+  const videoRef = useRef(null);
+  const group = groups[groupIndex];
+  const story = group?.stories[storyIndex];
+
+  const isMine = String(group?.userId) === String(currentUserId);
+
+  useEffect(() => {
+    if (!videoRef.current) return;
+
+    if (paused) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [paused, story?._id]);
+
+  function nextStory() {
+    if (!group) return;
+
+    if (storyIndex < group.stories.length - 1) {
+      setStoryIndex((value) => value + 1);
+      return;
+    }
+
+    if (groupIndex < groups.length - 1) {
+      setGroupIndex((value) => value + 1);
+      setStoryIndex(0);
+      return;
+    }
+
+    onClose();
+  }
+
+  function previousStory() {
+    if (storyIndex > 0) {
+      setStoryIndex((value) => value - 1);
+      return;
+    }
+
+    if (groupIndex > 0) {
+      const previousGroup = groups[groupIndex - 1];
+      setGroupIndex((value) => value - 1);
+      setStoryIndex(previousGroup.stories.length - 1);
+    }
+  }
+
+  async function refreshViewers() {
+    if (!story?._id || !isMine) return;
+
+    try {
+      const response = await axiosInstance.get(`/stories/${story._id}/viewers`);
+
+      const viewers = response.data.viewers || [];
+
+      setStoryViewers(viewers);
+      setViewerCount(response.data.totalViews ?? viewers.length);
+
+      return viewers;
+    } catch (error) {
+      console.error("Unable to refresh story viewers:", error);
+    }
+  }
+
+  useEffect(() => {
+    if (!isMine || !story?._id) return;
+
+    refreshViewers();
+
+    const interval = setInterval(() => {
+      refreshViewers();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [story?._id, isMine]);
+
+  async function openViewers() {
+    if (!story?._id || !isMine) return;
+
+    setShowViewers(true);
+    setLoadingViewers(true);
+
+    try {
+      await refreshViewers();
+    } catch (error) {
+      toast.error("Unable to load viewers.");
+    } finally {
+      setLoadingViewers(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!story?._id || isMine) return;
+
+    axiosInstance.post(`/stories/${story._id}/view`).catch((error) => {
+      console.error("Unable to record story view:", error);
+    });
+  }, [story?._id, isMine]);
+
+  useEffect(() => {
+    if (!story || paused || story.mediaType === "video") return;
+
+    const timer = setTimeout(nextStory, 5000);
+    return () => clearTimeout(timer);
+  }, [story?._id, paused, groupIndex, storyIndex]);
+
+  async function removeStory() {
+    if (!story || !isMine || deleting) return;
+
+    if (!window.confirm("Delete this story?")) return;
+
+    setDeleting(true);
+
+    try {
+      await axiosInstance.delete(`/stories/${story._id}`);
+      toast.success("Story deleted.");
+
+      await onRefresh();
+
+      if (group.stories.length > 1 && storyIndex > 0) {
+        setStoryIndex((value) => value - 1);
+      } else if (group.stories.length > 1) {
+        setStoryIndex(0);
+      } else {
+        onClose();
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Unable to delete story.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (!story) return null;
+
+  return (
+    <div className="story-viewer-backdrop">
+      <div className="story-viewer">
+        <div className="story-progress">
+          {group.stories.map((item, index) => (
+            <div className="story-progress-track" key={item._id}>
+              <div
+                className={`story-progress-fill ${
+                  index < storyIndex ? "completed" : ""
+                }`}
+                style={{
+                  width: index < storyIndex ? "100%" : "0%",
+                  animation:
+                    index === storyIndex && story.mediaType !== "video"
+                      ? paused
+                        ? "none"
+                        : "story-progress 5s linear forwards"
+                      : "none",
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="story-viewer-header">
+          <Avatar user={group.user} />
+
+          <div>
+            <b>{isMine ? "My status" : group.user?.userName}</b>
+            <small>{formatTime(story.createdAt)}</small>
+          </div>
+
+          {isMine && (
+            <button
+              type="button"
+              className="story-view-count"
+              onClick={openViewers}
+              title="See who viewed your story"
+            >
+              <span>◉</span>
+              <span>{viewerCount}</span>
+            </button>
+          )}
+
+          <button
+            className="story-viewer-close"
+            onClick={onClose}
+            aria-label="Close story"
+          >
+            ×
+          </button>
+        </div>
+
+        <div
+          className="story-viewer-media"
+          onMouseDown={() => setPaused(true)}
+          onMouseUp={() => setPaused(false)}
+          onMouseLeave={() => setPaused(false)}
+          onTouchStart={() => setPaused(true)}
+          onTouchEnd={() => setPaused(false)}
+        >
+          {story.mediaType === "video" ? (
+            <video
+              key={story._id}
+              src={story.mediaUrl}
+              ref={videoRef}
+              autoPlay
+              playsInline
+              controls={false}
+              onEnded={nextStory}
+            />
+          ) : (
+            <img src={story.mediaUrl} alt="Story" />
+          )}
+
+          <button
+            className="story-nav story-nav-left"
+            onClick={previousStory}
+            aria-label="Previous story"
+          />
+
+          <button
+            className="story-nav story-nav-right"
+            onClick={nextStory}
+            aria-label="Next story"
+          />
+        </div>
+
+        {story.caption && (
+          <div className="story-viewer-caption">{story.caption}</div>
+        )}
+
+        {isMine && (
+          <div className="story-owner-actions">
+            <button onClick={removeStory} disabled={deleting}>
+              {deleting ? "Deleting…" : "Delete story"}
+            </button>
+          </div>
+        )}
+
+        {showViewers && (
+          <div
+            className="story-viewers-backdrop"
+            onClick={() => setShowViewers(false)}
+          >
+            <div
+              className="story-viewers-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="story-viewers-heading">
+                <div>
+                  <h3>Viewed by</h3>
+                  <small>{storyViewers.length} viewers</small>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowViewers(false)}
+                  aria-label="Close viewers"
+                >
+                  ×
+                </button>
+              </div>
+
+              {loadingViewers ? (
+                <div className="story-viewers-empty">Loading viewers...</div>
+              ) : storyViewers.length === 0 ? (
+                <div className="story-viewers-empty">
+                  No one has viewed this story yet.
+                </div>
+              ) : (
+                <div className="story-viewers-list">
+                  {storyViewers.map((viewer) => (
+                    <div className="story-viewer-person" key={viewer.userId}>
+                      <Avatar
+                        user={{
+                          userName: viewer.userName,
+                          avatar: viewer.avatar,
+                        }}
+                      />
+
+                      <div className="story-viewer-person-info">
+                        <b>{viewer.userName || "User"}</b>
+                        <small>
+                          First viewed{" "}
+                          {new Date(viewer.viewedAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function groupStoriesByUser(stories = []) {
+  const groups = new Map();
+
+  for (const story of stories) {
+    const userId = String(story.userId?._id || story.userId);
+
+    if (!userId) continue;
+
+    if (!groups.has(userId)) {
+      groups.set(userId, {
+        userId,
+        user: story.userId,
+        stories: [],
+      });
+    }
+
+    groups.get(userId).stories.push(story);
+  }
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    stories: group.stories.sort(
+      (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+    ),
+  }));
 }
 
 function AttachmentPreview({ attachment }) {
@@ -1412,7 +1844,13 @@ function Conversation({ signalStatus }) {
             >
               ▣
             </button>
-            <button className="ai-action" onClick={() => setAiOpen(true)}>
+            {/* <button className="ai-action" onClick={() => setAiOpen(true)}>
+              ✦ <span>AI assist</span>
+            </button> */}
+            <button
+              className="ai-action"
+              onClick={() => toast.success("Coming soon!")}
+            >
               ✦ <span>AI assist</span>
             </button>
             <button
@@ -1549,21 +1987,21 @@ function Conversation({ signalStatus }) {
                       />
                       <div className=" save-edit">
                         <button
-                        type="button"
-                        onClick={() => saveEdit(message)}
-                        disabled={savingEdit || !editDraft.trim()}
-                      >
-                        {savingEdit ? "Saving..." : "Save"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingMessageId(null);
-                          setEditDraft("");
-                        }}
-                      >
-                        Cancel
-                      </button>
+                          type="button"
+                          onClick={() => saveEdit(message)}
+                          disabled={savingEdit || !editDraft.trim()}
+                        >
+                          {savingEdit ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingMessageId(null);
+                            setEditDraft("");
+                          }}
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -1607,7 +2045,10 @@ function Conversation({ signalStatus }) {
                 ? "Signal encryption active"
                 : "Configure Signal Relay to send messages"}
             </span>
-            <button onClick={() => setAiOpen(true)}>✦ Improve with AI</button>
+            {/* <button onClick={() => setAiOpen(true)}>✦ Improve with AI</button> */}
+            <button onClick={() => toast.success("Coming soon!")}>
+              ✦ Improve with AI
+            </button>
           </div>
           {selectedFile && (
             <div
@@ -1717,6 +2158,7 @@ function Conversation({ signalStatus }) {
               }}
             />
             <textarea
+              className="outline-none"
               value={draft}
               onChange={(e) => changeDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -1765,6 +2207,7 @@ export default function Chat() {
   const [tab, setTab] = useState("chats");
   const [query, setQuery] = useState("");
   const [storyModal, setStoryModal] = useState(false);
+  const [activeStoryUserId, setActiveStoryUserId] = useState(null);
   const [signalStatus, setSignalStatus] = useState("checking");
   const [incomingCall, setIncomingCall] = useState(null);
   const [globalAiOpen, setGlobalAiOpen] = useState(false);
@@ -1853,6 +2296,7 @@ export default function Chat() {
         stories={stories}
         calls={callHistory}
         onStory={() => setStoryModal(true)}
+        onOpenStory={(userId) => setActiveStoryUserId(userId)}
         tab={tab}
         setTab={setTab}
         query={query}
@@ -1887,7 +2331,10 @@ export default function Chat() {
             Polish a message, find the right tone, or turn a wall of text into
             key points.
           </p>
-          <button onClick={() => setGlobalAiOpen(true)}>
+          {/* <button onClick={() => setGlobalAiOpen(true)}>
+            Open AI assistant ↗
+          </button> */}
+          <button onClick={() => toast.success("Coming soon")}>
             Open AI assistant ↗
           </button>
         </div>
@@ -1949,6 +2396,16 @@ export default function Chat() {
         <StoriesModal
           onClose={() => setStoryModal(false)}
           onCreated={loadData}
+        />
+      )}
+
+      {activeStoryUserId && (
+        <StoryViewer
+          stories={stories}
+          initialUserId={activeStoryUserId}
+          currentUserId={authUser?._id}
+          onClose={() => setActiveStoryUserId(null)}
+          onRefresh={loadData}
         />
       )}
     </main>

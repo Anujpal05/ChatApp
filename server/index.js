@@ -11,6 +11,7 @@ import callRouter from "./routes/call.route.js";
 import storyRouter from "./routes/story.route.js";
 import aiRouter from "./routes/ai.route.js";
 import e2eeRouter from "./routes/e2ee.route.js";
+import groupRouter from "./routes/group.route.js";
 
 const PORT = Number(process.env.PORT || 5001);
 if (
@@ -60,6 +61,7 @@ app.use("/api/call", callRouter);
 app.use("/api/stories", storyRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/e2ee", e2eeRouter);
+app.use("/api/groups", groupRouter);
 
 app.use((err, _req, res, _next) => {
   console.error("Unhandled request error:", err.message);

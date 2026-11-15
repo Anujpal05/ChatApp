@@ -16,6 +16,27 @@ const messageSchema = new mongoose.Schema(
       index: true,
     },
 
+    conversationType: {
+      type: String,
+      enum: ["direct", "group"],
+      default: "direct",
+      index: true,
+    },
+
+    groupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Group",
+      default: null,
+      index: true,
+    },
+    
+    groupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Group",
+      default: null,
+      index: true,
+    },
+
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",
@@ -25,7 +46,7 @@ const messageSchema = new mongoose.Schema(
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",
-      required: true,
+      default: null,
     },
 
     clientMessageId: {
@@ -102,6 +123,12 @@ messageSchema.index(
 messageSchema.index({
   historyOwnerId: 1,
   conversationId: 1,
+  createdAt: -1,
+});
+
+messageSchema.index({
+  historyOwnerId: 1,
+  groupId: 1,
   createdAt: -1,
 });
 
